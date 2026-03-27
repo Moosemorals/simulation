@@ -1,0 +1,36 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
+// SPDX-License-Identifier: ISC
+
+using uk.osric.sim.terrain.Generation;
+
+namespace uk.osric.sim.server.Terrain;
+
+public sealed class TerrainSnapshot {
+    private const int FallbackSeed = 1729;
+    private const int FallbackSize = 513;
+    private const int FallbackErosionPasses = 1;
+
+    public TerrainSnapshot(ITerrainGenerator generator, IConfiguration configuration) {
+        ArgumentNullException.ThrowIfNull(generator);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        Options = BuildOptions(configuration);
+        Map = generator.Generate(Options);
+        HeightBytes = TerrainHeightEncoding.ToGreyscaleBytes(Map);
+    }
+
+    public TerrainGenerationOptions Options { get; }
+
+    public TerrainMap Map { get; }
+
+    public byte[] HeightBytes { get; }
+
+    private static TerrainGenerationOptions BuildOptions(IConfiguration configuration) {
+        return new TerrainGenerationOptions {
+            Seed = configuration.GetValue<int?>("Terrain:DefaultSeed") ?? FallbackSeed,
+            Size = configuration.GetValue<int?>("Terrain:DefaultSize") ?? FallbackSize,
+            BaseAlgorithm = "diamond-square",
+            ErosionPasses = configuration.GetValue<int?>("Terrain:ErosionPasses") ?? FallbackErosionPasses,
+        };
+    }
+}

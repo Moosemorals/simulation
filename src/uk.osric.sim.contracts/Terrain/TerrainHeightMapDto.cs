@@ -1,0 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
+// SPDX-License-Identifier: ISC
+
+namespace uk.osric.sim.contracts.Terrain;
+
+public sealed record TerrainHeightMapDto(
+    int Size,
+    string HeightDataBase64
+);

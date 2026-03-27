@@ -1,9 +1,11 @@
 const terrainSeedElement = document.getElementById("terrain-seed");
+const terrainMapStatusElement = document.getElementById("terrain-map-status");
 const streamStatusElement = document.getElementById("stream-status");
 const canvas = document.getElementById("sim-canvas");
 const context = canvas.getContext("2d");
 
 let zoom = 1;
+let terrainTextureCanvas = null;
 
 function renderPlaceholder() {
     if (context === null) {
@@ -29,10 +31,114 @@ function renderPlaceholder() {
     context.restore();
 }
 
+function decodeBase64(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+
+    return bytes;
+}
+
+function createTerrainTexture(size, heightBytes) {
+    const textureCanvas = document.createElement("canvas");
+    textureCanvas.width = size;
+    textureCanvas.height = size;
+
+    const textureContext = textureCanvas.getContext("2d");
+    if (textureContext === null) {
+        throw new Error("Unable to initialize terrain texture canvas context.");
+    }
+
+    const imageData = textureContext.createImageData(size, size);
+    const rgba = imageData.data;
+
+    for (let i = 0; i < heightBytes.length; i += 1) {
+        const grayscale = heightBytes[i];
+        const pixelOffset = i * 4;
+        rgba[pixelOffset] = grayscale;
+        rgba[pixelOffset + 1] = grayscale;
+        rgba[pixelOffset + 2] = grayscale;
+        rgba[pixelOffset + 3] = 255;
+    }
+
+    textureContext.putImageData(imageData, 0, 0);
+    return textureCanvas;
+}
+
+function renderTerrain() {
+    if (context === null) {
+        return;
+    }
+
+    if (terrainTextureCanvas === null) {
+        renderPlaceholder();
+        return;
+    }
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.imageSmoothingEnabled = false;
+
+    const terrainSize = terrainTextureCanvas.width;
+    const fitScale = Math.min(canvas.width / terrainSize, canvas.height / terrainSize);
+    const drawScale = fitScale * zoom;
+    const drawWidth = terrainSize * drawScale;
+    const drawHeight = terrainSize * drawScale;
+    const drawX = (canvas.width - drawWidth) * 0.5;
+    const drawY = (canvas.height - drawHeight) * 0.5;
+
+    context.drawImage(terrainTextureCanvas, drawX, drawY, drawWidth, drawHeight);
+}
+
+function updateTerrainMapStatus(size, byteCount, decodeDurationMs, renderDurationMs) {
+    if (terrainMapStatusElement === null) {
+        return;
+    }
+
+    terrainMapStatusElement.textContent = JSON.stringify({
+        size,
+        tileCount: size * size,
+        byteCount,
+        decodeMs: Number(decodeDurationMs.toFixed(2)),
+        renderMs: Number(renderDurationMs.toFixed(2)),
+    }, null, 2);
+}
+
 async function loadTerrainSeed() {
     const response = await fetch("/api/terrain/seed");
+
+    if (!response.ok) {
+        throw new Error(`Failed to load terrain seed (${response.status}).`);
+    }
+
     const payload = await response.json();
     terrainSeedElement.textContent = JSON.stringify(payload, null, 2);
+}
+
+async function loadTerrainHeightMap() {
+    const response = await fetch("/api/terrain/heightmap");
+
+    if (!response.ok) {
+        throw new Error(`Failed to load terrain height map (${response.status}).`);
+    }
+
+    const payload = await response.json();
+    const decodeStart = performance.now();
+    const size = payload.size;
+    const heightBytes = decodeBase64(payload.heightDataBase64);
+
+    if (heightBytes.length !== size * size) {
+        throw new Error("Height map payload size does not match map dimensions.");
+    }
+
+    terrainTextureCanvas = createTerrainTexture(size, heightBytes);
+    const decodeEnd = performance.now();
+    const renderStart = performance.now();
+    renderTerrain();
+    const renderEnd = performance.now();
+    updateTerrainMapStatus(size, heightBytes.length, decodeEnd - decodeStart, renderEnd - renderStart);
 }
 
 function connectSimulationStream() {
@@ -49,16 +155,19 @@ function connectSimulationStream() {
 
 document.getElementById("zoom-in").addEventListener("click", () => {
     zoom = Math.min(zoom + 0.1, 2);
-    renderPlaceholder();
+    renderTerrain();
 });
 
 document.getElementById("zoom-out").addEventListener("click", () => {
     zoom = Math.max(zoom - 0.1, 0.5);
-    renderPlaceholder();
+    renderTerrain();
 });
 
 renderPlaceholder();
-loadTerrainSeed().catch((error) => {
+Promise.all([loadTerrainSeed(), loadTerrainHeightMap()]).catch((error) => {
     terrainSeedElement.textContent = error instanceof Error ? error.message : String(error);
+    if (terrainMapStatusElement !== null) {
+        terrainMapStatusElement.textContent = error instanceof Error ? error.message : String(error);
+    }
 });
 connectSimulationStream();
