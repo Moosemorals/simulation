@@ -8,6 +8,8 @@ const minZoom = 0.25;
 const maxZoom = 4;
 let zoom = 1;
 let terrainTextureCanvas = null;
+let actorLayerCanvas = null;
+let actorLayerContext = null;
 let viewCenterX = 0;
 let viewCenterY = 0;
 let isDragging = false;
@@ -18,8 +20,24 @@ let lastTickAppliedAtMs = 0;
 let tickIntervalMs = 100;
 let animationFrameRequestId = null;
 
+// Pan animation state
+let panAnimationStartTimeMs = null;
+let panAnimationDurationMs = 250;
+let panAnimationStartX = 0;
+let panAnimationStartY = 0;
+let panAnimationTargetDeltaX = 0;
+let panAnimationTargetDeltaY = 0;
+
 function clamp(value, minValue, maxValue) {
     return Math.min(maxValue, Math.max(minValue, value));
+}
+
+function easeInOutCubic(t) {
+    // Cubic ease-in-out: smooth acceleration and deceleration
+    // t is normalized progress [0, 1]
+    return t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 function wrapCoordinate(value, size) {
@@ -80,6 +98,30 @@ function upsertActor(entityId, x, y) {
     });
 }
 
+function updatePanAnimation(nowMs) {
+    if (panAnimationStartTimeMs === null) {
+        return; // No animation in progress
+    }
+
+    const elapsedMs = nowMs - panAnimationStartTimeMs;
+    const rawProgress = elapsedMs / panAnimationDurationMs;
+
+    if (rawProgress >= 1.0) {
+        // Animation complete
+        viewCenterX = panAnimationStartX + panAnimationTargetDeltaX;
+        viewCenterY = panAnimationStartY + panAnimationTargetDeltaY;
+        normalizeViewCenter();
+        panAnimationStartTimeMs = null;
+        return;
+    }
+
+    // Apply easing to progress
+    const easeProgress = easeInOutCubic(rawProgress);
+    viewCenterX = panAnimationStartX + (panAnimationTargetDeltaX * easeProgress);
+    viewCenterY = panAnimationStartY + (panAnimationTargetDeltaY * easeProgress);
+    normalizeViewCenter();
+}
+
 function updateInterpolatedActors(nowMs) {
     const terrainSize = getTerrainSize();
     const hasTickAnchor = lastTickAppliedAtMs > 0;
@@ -93,6 +135,7 @@ function updateInterpolatedActors(nowMs) {
 }
 
 function renderFrame(nowMs) {
+    updatePanAnimation(nowMs);
     updateInterpolatedActors(nowMs);
     renderTerrain();
     animationFrameRequestId = requestAnimationFrame(renderFrame);
@@ -131,6 +174,14 @@ function clampZoom(nextZoom) {
     return Math.min(maxZoom, Math.max(minZoom, nextZoom));
 }
 
+function normalizeViewCenter() {
+    const terrainSize = getTerrainSize();
+    if (terrainSize > 0) {
+        viewCenterX = wrapCoordinate(viewCenterX, terrainSize);
+        viewCenterY = wrapCoordinate(viewCenterY, terrainSize);
+    }
+}
+
 function zoomAtCanvasPoint(nextZoom, anchorX, anchorY) {
     const clampedZoom = clampZoom(nextZoom);
     if (terrainTextureCanvas === null || Math.abs(clampedZoom - zoom) < 0.0001) {
@@ -147,6 +198,7 @@ function zoomAtCanvasPoint(nextZoom, anchorX, anchorY) {
     zoom = clampedZoom;
     viewCenterX = worldX - ((anchorX - canvas.width * 0.5) / nextScale);
     viewCenterY = worldY - ((anchorY - canvas.height * 0.5) / nextScale);
+    normalizeViewCenter();
 }
 
 function renderPlaceholder() {
@@ -210,6 +262,72 @@ function createTerrainTexture(size, heightBytes) {
     return textureCanvas;
 }
 
+function ensureActorLayer(size) {
+    if (actorLayerCanvas !== null && actorLayerCanvas.width === size && actorLayerCanvas.height === size) {
+        return;
+    }
+
+    actorLayerCanvas = document.createElement("canvas");
+    actorLayerCanvas.width = size;
+    actorLayerCanvas.height = size;
+
+    actorLayerContext = actorLayerCanvas.getContext("2d");
+    if (actorLayerContext === null) {
+        throw new Error("Unable to initialize actor layer canvas context.");
+    }
+
+    actorLayerContext.imageSmoothingEnabled = false;
+}
+
+function renderActorsToLayer() {
+    if (actorLayerCanvas === null || actorLayerContext === null) {
+        return;
+    }
+
+    actorLayerContext.clearRect(0, 0, actorLayerCanvas.width, actorLayerCanvas.height);
+    actorLayerContext.fillStyle = "#f7f3e6";
+    actorLayerContext.strokeStyle = "#1c1a16";
+    actorLayerContext.lineWidth = 0.7;
+
+    for (const actor of actors.values()) {
+        actorLayerContext.beginPath();
+        actorLayerContext.arc(actor.drawX, actor.drawY, 3.5, 0, Math.PI * 2);
+        actorLayerContext.fill();
+        actorLayerContext.stroke();
+    }
+}
+
+function drawWrappedTiles(sourceCanvas, tileRange, terrainSize) {
+    for (let ty = tileRange.minTy; ty <= tileRange.maxTy; ty += 1) {
+        for (let tx = tileRange.minTx; tx <= tileRange.maxTx; tx += 1) {
+            context.drawImage(sourceCanvas, tx * terrainSize, ty * terrainSize, terrainSize, terrainSize);
+        }
+    }
+}
+
+function getVisibleTileRange() {
+    if (terrainTextureCanvas === null) {
+        return { minTx: 0, maxTx: 0, minTy: 0, maxTy: 0 };
+    }
+
+    const terrainSize = terrainTextureCanvas.width;
+    const drawScale = getDrawScale();
+    const viewportWorldWidth = canvas.width / drawScale;
+    const viewportWorldHeight = canvas.height / drawScale;
+
+    const leftWorld = viewCenterX - viewportWorldWidth * 0.5;
+    const topWorld = viewCenterY - viewportWorldHeight * 0.5;
+    const rightWorld = leftWorld + viewportWorldWidth;
+    const bottomWorld = topWorld + viewportWorldHeight;
+
+    const minTx = Math.floor(leftWorld / terrainSize);
+    const maxTx = Math.floor(rightWorld / terrainSize);
+    const minTy = Math.floor(topWorld / terrainSize);
+    const maxTy = Math.floor(bottomWorld / terrainSize);
+
+    return { minTx, maxTx, minTy, maxTy };
+}
+
 function renderTerrain() {
     if (context === null) {
         return;
@@ -221,6 +339,9 @@ function renderTerrain() {
     }
 
     const drawScale = getDrawScale();
+    const terrainSize = terrainTextureCanvas.width;
+    ensureActorLayer(terrainSize);
+    renderActorsToLayer();
 
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.save();
@@ -233,22 +354,15 @@ function renderTerrain() {
         (canvas.width * 0.5) - (viewCenterX * drawScale),
         (canvas.height * 0.5) - (viewCenterY * drawScale));
 
-    context.drawImage(terrainTextureCanvas, 0, 0, terrainTextureCanvas.width, terrainTextureCanvas.height);
+    const tileRange = getVisibleTileRange();
+    drawWrappedTiles(terrainTextureCanvas, tileRange, terrainSize);
 
-    for (const actor of actors.values()) {
-        context.fillStyle = "#f7f3e6";
-        context.beginPath();
-        context.arc(actor.drawX, actor.drawY, 3.5, 0, Math.PI * 2);
-        context.fill();
-
-        context.strokeStyle = "#1c1a16";
-        context.lineWidth = 0.7;
-        context.stroke();
+    if (actorLayerCanvas !== null) {
+        drawWrappedTiles(actorLayerCanvas, tileRange, terrainSize);
     }
 
     context.restore();
 }
-
 function updateTerrainMapStatus(size, byteCount, decodeDurationMs, renderDurationMs) {
     if (terrainMapStatusElement === null) {
         return;
@@ -376,8 +490,13 @@ function panByViewportRatio(xRatio, yRatio) {
     const drawScale = getDrawScale();
     const viewportWorldWidth = canvas.width / drawScale;
     const viewportWorldHeight = canvas.height / drawScale;
-    viewCenterX += viewportWorldWidth * xRatio;
-    viewCenterY += viewportWorldHeight * yRatio;
+    
+    // Start a smooth pan animation
+    panAnimationStartTimeMs = performance.now();
+    panAnimationStartX = viewCenterX;
+    panAnimationStartY = viewCenterY;
+    panAnimationTargetDeltaX = viewportWorldWidth * xRatio;
+    panAnimationTargetDeltaY = viewportWorldHeight * yRatio;
 }
 
 canvas.addEventListener("wheel", (event) => {
@@ -411,6 +530,7 @@ canvas.addEventListener("mousemove", (event) => {
     viewCenterX -= dx / drawScale;
     viewCenterY -= dy / drawScale;
     lastDragPoint = point;
+    normalizeViewCenter();
 });
 
 function endDrag() {
