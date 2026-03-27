@@ -13,42 +13,6 @@
         "cwd": "${workspaceFolder}"
       },
       "group": "build"
-    },
-    {
-      "label": "build:server-terrain-worktree",
-      "type": "shell",
-      "command": "dotnet",
-      "args": [
-        "build",
-        "src/uk.osric.sim.server/uk.osric.sim.server.csproj"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}/../simulation-terrain"
-      }
-    },
-    {
-      "label": "build:server-simulation-worktree",
-      "type": "shell",
-      "command": "dotnet",
-      "args": [
-        "build",
-        "src/uk.osric.sim.server/uk.osric.sim.server.csproj"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}/../simulation-simulation"
-      }
-    },
-    {
-      "label": "build:server-server-worktree",
-      "type": "shell",
-      "command": "dotnet",
-      "args": [
-        "build",
-        "src/uk.osric.sim.server/uk.osric.sim.server.csproj"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}/../simulation-server"
-      }
     }
   ]
 }

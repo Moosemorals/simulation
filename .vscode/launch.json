@@ -8,97 +8,12 @@
       "checkForDevCert": false,
       "preLaunchTask": "build:server-main",
       "program": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug",
+      "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
       "serverReadyAction": {
         "action": "openExternally",
         "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
       },
-      "logging": {
-        "moduleLoad": false
-      },
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5000",
-        "DOTNET_GENERATE_ASPNET_CERTIFICATE": "false"
-      }
-    },
-    {
-      "name": "Server: main worktree",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build:server-main",
-      "program": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug",
-      "stopAtEntry": false,
-      "logging": {
-        "moduleLoad": false
-      },
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5000",
-        "DOTNET_GENERATE_ASPNET_CERTIFICATE": "false"
-      }
-    },
-    {
-      "name": "Server: terrain worktree",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build:server-terrain-worktree",
-      "program": "${workspaceFolder}/../simulation-terrain/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/../simulation-terrain/artifacts/bin/uk.osric.sim.server/debug",
-      "stopAtEntry": false,
-      "logging": {
-        "moduleLoad": false
-      },
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5000",
-        "DOTNET_GENERATE_ASPNET_CERTIFICATE": "false"
-      }
-    },
-    {
-      "name": "Server: simulation worktree",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build:server-simulation-worktree",
-      "program": "${workspaceFolder}/../simulation-simulation/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/../simulation-simulation/artifacts/bin/uk.osric.sim.server/debug",
-      "stopAtEntry": false,
-      "logging": {
-        "moduleLoad": false
-      },
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5000",
-        "DOTNET_GENERATE_ASPNET_CERTIFICATE": "false"
-      }
-    },
-    {
-      "name": "Server: server worktree",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build:server-server-worktree",
-      "program": "${workspaceFolder}/../simulation-server/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/../simulation-server/artifacts/bin/uk.osric.sim.server/debug",
-      "stopAtEntry": false,
-      "logging": {
-        "moduleLoad": false
-      },
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5000",
-        "DOTNET_GENERATE_ASPNET_CERTIFICATE": "false"
-      }
-    },
-    {
-      "name": "Server: frontend worktree",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build:server-frontend-worktree",
-      "program": "${workspaceFolder}/../simulation-frontend/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/../simulation-frontend/artifacts/bin/uk.osric.sim.server/debug",
-      "stopAtEntry": false,
       "logging": {
         "moduleLoad": false
       },
