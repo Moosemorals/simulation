@@ -551,10 +551,10 @@ document.getElementById("zoom-out").addEventListener("click", () => {
     zoomAtCanvasPoint(zoom / 1.1, canvas.width * 0.5, canvas.height * 0.5);
 });
 
-document.getElementById("pan-up").addEventListener("click", () => panByViewportRatio(0, 0.1));
-document.getElementById("pan-down").addEventListener("click", () => panByViewportRatio(0, -0.1));
-document.getElementById("pan-left").addEventListener("click", () => panByViewportRatio(0.1, 0));
-document.getElementById("pan-right").addEventListener("click", () => panByViewportRatio(-0.1, 0));
+document.getElementById("pan-up").addEventListener("click", () => panByViewportRatio(0, -0.1));
+document.getElementById("pan-down").addEventListener("click", () => panByViewportRatio(0, 0.1));
+document.getElementById("pan-left").addEventListener("click", () => panByViewportRatio(-0.1, 0));
+document.getElementById("pan-right").addEventListener("click", () => panByViewportRatio(0.1, 0));
 
 document.getElementById("reset-view").addEventListener("click", () => {
     if (terrainTextureCanvas === null) {
