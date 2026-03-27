@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\uk.osric.sim.terrain\uk.osric.sim.terrain.csproj" />
+    <ProjectReference Include="..\uk.osric.sim.simulation\uk.osric.sim.simulation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\uk.osric.sim.frontend\public\**\*.*" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <AssemblyName>uk.osric.sim.server</AssemblyName>
+    <RootNamespace>uk.osric.sim.server</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>

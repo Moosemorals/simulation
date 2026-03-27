@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>uk.osric.sim</title>
+    <link rel="stylesheet" href="/styles/site.css">
+</head>
+<body>
+    <main class="layout">
+        <section class="hero">
+            <p class="eyebrow">uk.osric.sim</p>
+            <h1>Medieval low-fantasy simulation</h1>
+            <p class="summary">Terrain, simulation, server, and frontend now have separate seams so they can move in parallel without rewriting the baseline.</p>
+        </section>
+        <section class="status-panel">
+            <div>
+                <h2>Terrain Seed</h2>
+                <pre id="terrain-seed">Loading...</pre>
+            </div>
+            <div>
+                <h2>Simulation Stream</h2>
+                <pre id="stream-status">Connecting...</pre>
+            </div>
+        </section>
+        <section class="viewport-panel">
+            <div class="viewport-toolbar">
+                <button id="zoom-in" type="button">+</button>
+                <button id="zoom-out" type="button">-</button>
+            </div>
+            <canvas id="sim-canvas" width="960" height="540"></canvas>
+        </section>
+    </main>
+    <script src="/scripts/app.js"></script>
+</body>
+</html>

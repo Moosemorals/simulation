@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <Authors>Osric Wilkinson</Authors>
+    <Company>Osric Wilkinson</Company>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+  </PropertyGroup>
+</Project>
