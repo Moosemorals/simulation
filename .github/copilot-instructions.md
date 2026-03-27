@@ -58,5 +58,7 @@
 # Delivery Guidance
 
 - Scaffold and stabilize shared contracts first, then parallelize work by module.
+- Rebase active module branches from `main` frequently, especially after shared contract changes.
+- For long-lived module branches, merge small, reviewable slices back into `main` regularly so progress stays visible to the team.
 - Keep terrain, simulation, server, and frontend changes independently buildable whenever possible.
 - Document assumptions in the relevant module prompt or plan file before widening interfaces.
