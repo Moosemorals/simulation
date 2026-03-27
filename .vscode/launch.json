@@ -5,6 +5,7 @@
       "name": "ASP.NET Core Server (Debug)",
       "type": "coreclr",
       "request": "launch",
+      "checkForDevCert": false,
       "preLaunchTask": "build:server-main",
       "program": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
       "cwd": "${workspaceFolder}",

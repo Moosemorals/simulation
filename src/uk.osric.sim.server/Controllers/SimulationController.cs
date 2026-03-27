@@ -21,17 +21,27 @@ public sealed class SimulationController : ControllerBase {
 
         int sequence = 0;
 
-        while (!cancellationToken.IsCancellationRequested) {
-            SimulationTickDto dto = new(sequence, SimulationOptions.DefaultTickRateHz, DateTimeOffset.UtcNow);
-            string payload = JsonSerializer.Serialize(dto);
+        try {
+            while (!cancellationToken.IsCancellationRequested) {
+                SimulationTickDto dto = new(sequence, SimulationOptions.DefaultTickRateHz, DateTimeOffset.UtcNow);
+                string payload = JsonSerializer.Serialize(dto);
 
-            await Response.WriteAsync($"event: tick\n", cancellationToken);
-            await Response.WriteAsync($"data: {payload}\n\n", cancellationToken);
-            await Response.Body.FlushAsync(cancellationToken);
+                await Response.WriteAsync($"event: tick\n", cancellationToken);
+                await Response.WriteAsync($"data: {payload}\n\n", cancellationToken);
+                await Response.Body.FlushAsync(cancellationToken);
 
-            sequence++;
+                sequence++;
 
-            await Task.Delay(TimeSpan.FromMilliseconds(1000), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(1000), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            // Client disconnect/cancellation is expected for long-lived SSE streams.
+        }
+        finally {
+            if (!HttpContext.RequestAborted.IsCancellationRequested) {
+                await Response.CompleteAsync();
+            }
         }
     }
 }

@@ -6,7 +6,7 @@ namespace uk.osric.sim.server;
 public static class Program {
 	public static void Main(string[] args) {
 		WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-		builder.WebHost.UseUrls("http://0.0.0.0:5000");
+		builder.WebHost.UseUrls("http://localhost:5000");
 		
 		builder.Services.AddControllers();
 		builder.Services.AddHealthChecks();
