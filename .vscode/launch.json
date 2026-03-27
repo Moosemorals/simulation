@@ -8,7 +8,7 @@
       "checkForDevCert": false,
       "preLaunchTask": "build:server-main",
       "program": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug",
       "stopAtEntry": false,
       "serverReadyAction": {
         "action": "openExternally",
@@ -29,7 +29,7 @@
       "request": "launch",
       "preLaunchTask": "build:server-main",
       "program": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug",
       "stopAtEntry": false,
       "logging": {
         "moduleLoad": false
@@ -46,7 +46,7 @@
       "request": "launch",
       "preLaunchTask": "build:server-terrain-worktree",
       "program": "${workspaceFolder}/../simulation-terrain/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/../simulation-terrain",
+      "cwd": "${workspaceFolder}/../simulation-terrain/artifacts/bin/uk.osric.sim.server/debug",
       "stopAtEntry": false,
       "logging": {
         "moduleLoad": false
@@ -63,7 +63,7 @@
       "request": "launch",
       "preLaunchTask": "build:server-simulation-worktree",
       "program": "${workspaceFolder}/../simulation-simulation/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/../simulation-simulation",
+      "cwd": "${workspaceFolder}/../simulation-simulation/artifacts/bin/uk.osric.sim.server/debug",
       "stopAtEntry": false,
       "logging": {
         "moduleLoad": false
@@ -80,7 +80,7 @@
       "request": "launch",
       "preLaunchTask": "build:server-server-worktree",
       "program": "${workspaceFolder}/../simulation-server/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/../simulation-server",
+      "cwd": "${workspaceFolder}/../simulation-server/artifacts/bin/uk.osric.sim.server/debug",
       "stopAtEntry": false,
       "logging": {
         "moduleLoad": false
@@ -97,7 +97,7 @@
       "request": "launch",
       "preLaunchTask": "build:server-frontend-worktree",
       "program": "${workspaceFolder}/../simulation-frontend/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/../simulation-frontend",
+      "cwd": "${workspaceFolder}/../simulation-frontend/artifacts/bin/uk.osric.sim.server/debug",
       "stopAtEntry": false,
       "logging": {
         "moduleLoad": false

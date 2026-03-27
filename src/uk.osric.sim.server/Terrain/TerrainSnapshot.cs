@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
+using System.Diagnostics;
+
 using uk.osric.sim.terrain.Generation;
 
 namespace uk.osric.sim.server.Terrain;
@@ -10,12 +12,22 @@ public sealed class TerrainSnapshot {
     private const int FallbackSize = 513;
     private const int FallbackErosionPasses = 1;
 
-    public TerrainSnapshot(ITerrainGenerator generator, IConfiguration configuration) {
+    public TerrainSnapshot(ITerrainGenerator generator, IConfiguration configuration, ILogger<TerrainSnapshot> logger) {
         ArgumentNullException.ThrowIfNull(generator);
         ArgumentNullException.ThrowIfNull(configuration);
 
         Options = BuildOptions(configuration);
+
+        logger.LogInformation(
+            "Generating terrain: seed={Seed}, size={Size}, erosionPasses={ErosionPasses}",
+            Options.Seed, Options.Size, Options.ErosionPasses);
+
+        Stopwatch sw = Stopwatch.StartNew();
         Map = generator.Generate(Options);
+        sw.Stop();
+
+        logger.LogInformation("Terrain generation complete in {ElapsedMs} ms", sw.ElapsedMilliseconds);
+
         HeightBytes = TerrainHeightEncoding.ToGreyscaleBytes(Map);
     }
 

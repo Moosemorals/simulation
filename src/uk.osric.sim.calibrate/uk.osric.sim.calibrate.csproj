@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>uk.osric.sim.calibrate</AssemblyName>
+    <RootNamespace>uk.osric.sim.calibrate</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\uk.osric.sim.terrain\uk.osric.sim.terrain.csproj" />
+  </ItemGroup>
+
+</Project>
