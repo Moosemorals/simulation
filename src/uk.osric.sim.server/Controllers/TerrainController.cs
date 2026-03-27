@@ -15,20 +15,14 @@ public sealed class TerrainController : ControllerBase {
     public ActionResult<TerrainSeedDto> GetSeed() {
         TerrainGenerationOptions options = new() {
             Seed = 1729,
-            Width = 512,
-            Height = 512,
-            WrapHorizontally = true,
-            WrapVertically = true,
+            Size = 513,
             BaseAlgorithm = "diamond-square",
             ErosionPasses = 1,
         };
 
         TerrainSeedDto dto = new(
             options.Seed,
-            options.Width,
-            options.Height,
-            options.WrapHorizontally,
-            options.WrapVertically,
+            options.Size,
             options.BaseAlgorithm,
             options.ErosionPasses
         );
