@@ -14,6 +14,97 @@ let isDragging = false;
 let lastDragPoint = null;
 const actors = new Map();
 let lastTickSequence = null;
+let lastTickAppliedAtMs = 0;
+let tickIntervalMs = 100;
+let animationFrameRequestId = null;
+
+function clamp(value, minValue, maxValue) {
+    return Math.min(maxValue, Math.max(minValue, value));
+}
+
+function wrapCoordinate(value, size) {
+    if (size <= 0) {
+        return value;
+    }
+
+    return ((value % size) + size) % size;
+}
+
+function interpolateWrapped(previous, current, alpha, size) {
+    if (size <= 0) {
+        return previous + ((current - previous) * alpha);
+    }
+
+    let delta = current - previous;
+    const halfSize = size * 0.5;
+
+    if (delta > halfSize) {
+        delta -= size;
+    } else if (delta < -halfSize) {
+        delta += size;
+    }
+
+    return wrapCoordinate(previous + (delta * alpha), size);
+}
+
+function getTerrainSize() {
+    if (terrainTextureCanvas === null) {
+        return 0;
+    }
+
+    return terrainTextureCanvas.width;
+}
+
+function updateActorState(actor, x, y) {
+    actor.previousX = actor.currentX;
+    actor.previousY = actor.currentY;
+    actor.currentX = x;
+    actor.currentY = y;
+}
+
+function upsertActor(entityId, x, y) {
+    const existingActor = actors.get(entityId);
+
+    if (existingActor !== undefined) {
+        updateActorState(existingActor, x, y);
+        return;
+    }
+
+    actors.set(entityId, {
+        previousX: x,
+        previousY: y,
+        currentX: x,
+        currentY: y,
+        drawX: x,
+        drawY: y,
+    });
+}
+
+function updateInterpolatedActors(nowMs) {
+    const terrainSize = getTerrainSize();
+    const hasTickAnchor = lastTickAppliedAtMs > 0;
+    const rawAlpha = hasTickAnchor ? ((nowMs - lastTickAppliedAtMs) / tickIntervalMs) : 1;
+    const alpha = clamp(rawAlpha, 0, 1);
+
+    for (const actor of actors.values()) {
+        actor.drawX = interpolateWrapped(actor.previousX, actor.currentX, alpha, terrainSize);
+        actor.drawY = interpolateWrapped(actor.previousY, actor.currentY, alpha, terrainSize);
+    }
+}
+
+function renderFrame(nowMs) {
+    updateInterpolatedActors(nowMs);
+    renderTerrain();
+    animationFrameRequestId = requestAnimationFrame(renderFrame);
+}
+
+function startRenderLoop() {
+    if (animationFrameRequestId !== null) {
+        return;
+    }
+
+    animationFrameRequestId = requestAnimationFrame(renderFrame);
+}
 
 function eventToCanvasPoint(event) {
     const rect = canvas.getBoundingClientRect();
@@ -44,7 +135,6 @@ function zoomAtCanvasPoint(nextZoom, anchorX, anchorY) {
     const clampedZoom = clampZoom(nextZoom);
     if (terrainTextureCanvas === null || Math.abs(clampedZoom - zoom) < 0.0001) {
         zoom = clampedZoom;
-        renderTerrain();
         return;
     }
 
@@ -57,8 +147,6 @@ function zoomAtCanvasPoint(nextZoom, anchorX, anchorY) {
     zoom = clampedZoom;
     viewCenterX = worldX - ((anchorX - canvas.width * 0.5) / nextScale);
     viewCenterY = worldY - ((anchorY - canvas.height * 0.5) / nextScale);
-
-    renderTerrain();
 }
 
 function renderPlaceholder() {
@@ -150,7 +238,7 @@ function renderTerrain() {
     for (const actor of actors.values()) {
         context.fillStyle = "#f7f3e6";
         context.beginPath();
-        context.arc(actor.x, actor.y, 3.5, 0, Math.PI * 2);
+        context.arc(actor.drawX, actor.drawY, 3.5, 0, Math.PI * 2);
         context.fill();
 
         context.strokeStyle = "#1c1a16";
@@ -222,21 +310,38 @@ function connectSimulationStream() {
 
     eventSource.addEventListener("tick", (event) => {
         const payload = JSON.parse(event.data);
+        const sequence = Number.isInteger(payload.sequence) ? payload.sequence : null;
+
+        if (sequence === null) {
+            return;
+        }
+
+        if (lastTickSequence !== null && sequence <= lastTickSequence) {
+            return;
+        }
+
+        if (Number.isFinite(payload.tickRateHz) && payload.tickRateHz > 0) {
+            tickIntervalMs = 1000 / payload.tickRateHz;
+        }
 
         if (Array.isArray(payload.locationChanges)) {
             for (const change of payload.locationChanges) {
-                actors.set(change.entityId, { x: change.x, y: change.y });
+                if (!Number.isInteger(change.entityId) || !Number.isFinite(change.x) || !Number.isFinite(change.y)) {
+                    continue;
+                }
+
+                upsertActor(change.entityId, change.x, change.y);
             }
         }
 
-        lastTickSequence = payload.sequence;
+        lastTickAppliedAtMs = performance.now();
+        lastTickSequence = sequence;
         streamStatusElement.textContent = JSON.stringify({
             status: "connected",
-            sequence: payload.sequence,
+            sequence,
             changes: Array.isArray(payload.locationChanges) ? payload.locationChanges.length : 0,
             trackedActors: actors.size,
         }, null, 2);
-        renderTerrain();
     });
 
     eventSource.onerror = () => {
@@ -259,13 +364,8 @@ async function loadActorsSnapshot() {
     actors.clear();
 
     for (const actor of payload) {
-        actors.set(actor.entityId, {
-            x: actor.x,
-            y: actor.y,
-        });
+        upsertActor(actor.entityId, actor.x, actor.y);
     }
-
-    renderTerrain();
 }
 
 function panByViewportRatio(xRatio, yRatio) {
@@ -278,7 +378,6 @@ function panByViewportRatio(xRatio, yRatio) {
     const viewportWorldHeight = canvas.height / drawScale;
     viewCenterX += viewportWorldWidth * xRatio;
     viewCenterY += viewportWorldHeight * yRatio;
-    renderTerrain();
 }
 
 canvas.addEventListener("wheel", (event) => {
@@ -312,8 +411,6 @@ canvas.addEventListener("mousemove", (event) => {
     viewCenterX -= dx / drawScale;
     viewCenterY -= dy / drawScale;
     lastDragPoint = point;
-
-    renderTerrain();
 });
 
 function endDrag() {
@@ -340,6 +437,7 @@ document.getElementById("pan-left").addEventListener("click", () => panByViewpor
 document.getElementById("pan-right").addEventListener("click", () => panByViewportRatio(0.1, 0));
 
 renderPlaceholder();
+startRenderLoop();
 Promise.all([loadTerrainSeed(), loadTerrainHeightMap()]).catch((error) => {
     terrainSeedElement.textContent = error instanceof Error ? error.message : String(error);
     if (terrainMapStatusElement !== null) {
