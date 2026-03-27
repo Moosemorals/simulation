@@ -18,7 +18,13 @@ public static class Program {
 		builder.WebHost.UseUrls("http://localhost:5000");
 
 		string appBaseDirectory = AppContext.BaseDirectory;
-		builder.Configuration.AddJsonFile(Path.Combine(appBaseDirectory, "appsettings.json"), optional: true, reloadOnChange: true);
+		string appSettingsPath = Path.Combine(appBaseDirectory, "appsettings.json");
+		if (!File.Exists(appSettingsPath)) {
+			throw new FileNotFoundException(
+				$"Missing required configuration file 'appsettings.json'. Expected path: '{appSettingsPath}'.");
+		}
+
+		builder.Configuration.AddJsonFile(appSettingsPath, optional: false, reloadOnChange: true);
 		builder.Configuration.AddJsonFile(
 			Path.Combine(appBaseDirectory, $"appsettings.{builder.Environment.EnvironmentName}.json"),
 			optional: true,

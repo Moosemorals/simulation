@@ -6,6 +6,7 @@ const context = canvas.getContext("2d");
 
 let zoom = 1;
 let terrainTextureCanvas = null;
+let hydraulicsTextureCanvas = null;
 
 function renderPlaceholder() {
     if (context === null) {
@@ -68,6 +69,56 @@ function createTerrainTexture(size, heightBytes) {
     return textureCanvas;
 }
 
+function createHydraulicsTexture(size, waterAccumulationBytes, riverMaskBytes, lakeMaskBytes) {
+    const textureCanvas = document.createElement("canvas");
+    textureCanvas.width = size;
+    textureCanvas.height = size;
+
+    const textureContext = textureCanvas.getContext("2d");
+    if (textureContext === null) {
+        throw new Error("Unable to initialize hydraulics texture canvas context.");
+    }
+
+    const imageData = textureContext.createImageData(size, size);
+    const rgba = imageData.data;
+
+    for (let i = 0; i < waterAccumulationBytes.length; i += 1) {
+        const flow = waterAccumulationBytes[i];
+        const isRiver = riverMaskBytes[i] > 0;
+        const isLake = lakeMaskBytes[i] > 0;
+
+        const pixelOffset = i * 4;
+
+        // Render flow as subtle cyan haze, then force strong colors for river/lake masks.
+        let red = 10;
+        let green = Math.min(180, Math.round(flow * 0.6));
+        let blue = Math.min(220, Math.round(flow * 0.9));
+        let alpha = Math.min(180, Math.round(flow * 0.55));
+
+        if (isRiver) {
+            red = 16;
+            green = 196;
+            blue = 255;
+            alpha = 235;
+        }
+
+        if (isLake) {
+            red = 8;
+            green = 112;
+            blue = 255;
+            alpha = 215;
+        }
+
+        rgba[pixelOffset] = red;
+        rgba[pixelOffset + 1] = green;
+        rgba[pixelOffset + 2] = blue;
+        rgba[pixelOffset + 3] = alpha;
+    }
+
+    textureContext.putImageData(imageData, 0, 0);
+    return textureCanvas;
+}
+
 function renderTerrain() {
     if (context === null) {
         return;
@@ -90,9 +141,24 @@ function renderTerrain() {
     const drawY = (canvas.height - drawHeight) * 0.5;
 
     context.drawImage(terrainTextureCanvas, drawX, drawY, drawWidth, drawHeight);
+
+    if (hydraulicsTextureCanvas !== null) {
+        context.drawImage(hydraulicsTextureCanvas, drawX, drawY, drawWidth, drawHeight);
+    }
 }
 
-function updateTerrainMapStatus(size, byteCount, decodeDurationMs, renderDurationMs) {
+function countTruthyBytes(bytes) {
+    let count = 0;
+    for (let i = 0; i < bytes.length; i += 1) {
+        if (bytes[i] > 0) {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
+function updateTerrainMapStatus(size, byteCount, riverCount, lakeCount, decodeDurationMs, renderDurationMs) {
     if (terrainMapStatusElement === null) {
         return;
     }
@@ -101,6 +167,8 @@ function updateTerrainMapStatus(size, byteCount, decodeDurationMs, renderDuratio
         size,
         tileCount: size * size,
         byteCount,
+        riverTiles: riverCount,
+        lakeTiles: lakeCount,
         decodeMs: Number(decodeDurationMs.toFixed(2)),
         renderMs: Number(renderDurationMs.toFixed(2)),
     }, null, 2);
@@ -125,7 +193,6 @@ async function loadTerrainHeightMap() {
     }
 
     const payload = await response.json();
-    const decodeStart = performance.now();
     const size = payload.size;
     const heightBytes = decodeBase64(payload.heightDataBase64);
 
@@ -134,11 +201,35 @@ async function loadTerrainHeightMap() {
     }
 
     terrainTextureCanvas = createTerrainTexture(size, heightBytes);
-    const decodeEnd = performance.now();
-    const renderStart = performance.now();
-    renderTerrain();
-    const renderEnd = performance.now();
-    updateTerrainMapStatus(size, heightBytes.length, decodeEnd - decodeStart, renderEnd - renderStart);
+    return { size, byteCount: heightBytes.length };
+}
+
+async function loadTerrainHydraulicsMap() {
+    const response = await fetch("/api/terrain/hydraulics");
+
+    if (!response.ok) {
+        throw new Error(`Failed to load terrain hydraulics map (${response.status}).`);
+    }
+
+    const payload = await response.json();
+    const size = payload.size;
+
+    const waterAccumulationBytes = decodeBase64(payload.waterAccumulationDataBase64);
+    const riverMaskBytes = decodeBase64(payload.riverMaskDataBase64);
+    const lakeMaskBytes = decodeBase64(payload.lakeMaskDataBase64);
+
+    const expectedLength = size * size;
+    if (waterAccumulationBytes.length !== expectedLength || riverMaskBytes.length !== expectedLength || lakeMaskBytes.length !== expectedLength) {
+        throw new Error("Hydraulics payload size does not match map dimensions.");
+    }
+
+    hydraulicsTextureCanvas = createHydraulicsTexture(size, waterAccumulationBytes, riverMaskBytes, lakeMaskBytes);
+
+    return {
+        size,
+        riverCount: countTruthyBytes(riverMaskBytes),
+        lakeCount: countTruthyBytes(lakeMaskBytes),
+    };
 }
 
 function connectSimulationStream() {
@@ -164,7 +255,28 @@ document.getElementById("zoom-out").addEventListener("click", () => {
 });
 
 renderPlaceholder();
-Promise.all([loadTerrainSeed(), loadTerrainHeightMap()]).catch((error) => {
+const decodeStart = performance.now();
+Promise.all([loadTerrainSeed(), loadTerrainHeightMap(), loadTerrainHydraulicsMap()]).then((results) => {
+    const height = results[1];
+    const hydraulics = results[2];
+
+    if (height.size !== hydraulics.size) {
+        throw new Error("Height and hydraulics map sizes do not match.");
+    }
+
+    const decodeEnd = performance.now();
+    const renderStart = performance.now();
+    renderTerrain();
+    const renderEnd = performance.now();
+
+    updateTerrainMapStatus(
+        height.size,
+        height.byteCount,
+        hydraulics.riverCount,
+        hydraulics.lakeCount,
+        decodeEnd - decodeStart,
+        renderEnd - renderStart);
+}).catch((error) => {
     terrainSeedElement.textContent = error instanceof Error ? error.message : String(error);
     if (terrainMapStatusElement !== null) {
         terrainMapStatusElement.textContent = error instanceof Error ? error.message : String(error);

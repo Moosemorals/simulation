@@ -11,6 +11,7 @@ public sealed class TerrainSnapshot {
     private const int FallbackSeed = 1729;
     private const int FallbackSize = 513;
     private const int FallbackErosionPasses = 1;
+    private const int FallbackUpscaleFactor = 1;
 
     public TerrainSnapshot(ITerrainGenerator generator, IConfiguration configuration, ILogger<TerrainSnapshot> logger) {
         ArgumentNullException.ThrowIfNull(generator);
@@ -19,8 +20,8 @@ public sealed class TerrainSnapshot {
         Options = BuildOptions(configuration);
 
         logger.LogInformation(
-            "Generating terrain: seed={Seed}, size={Size}, erosionPasses={ErosionPasses}",
-            Options.Seed, Options.Size, Options.ErosionPasses);
+            "Generating terrain: seed={Seed}, size={Size}, erosionPasses={ErosionPasses}, upscaleFactor={UpscaleFactor}",
+            Options.Seed, Options.Size, Options.ErosionPasses, Options.UpscaleFactor);
 
         Stopwatch sw = Stopwatch.StartNew();
         Map = generator.Generate(Options);
@@ -28,7 +29,10 @@ public sealed class TerrainSnapshot {
 
         logger.LogInformation("Terrain generation complete in {ElapsedMs} ms", sw.ElapsedMilliseconds);
 
-        HeightBytes = TerrainHeightEncoding.ToGreyscaleBytes(Map);
+        HeightBytes = TerrainMapEncoding.EncodeHeight(Map);
+        WaterAccumulationBytes = TerrainMapEncoding.EncodeFloats(Map.WaterAccumulationData);
+        RiverMaskBytes = TerrainMapEncoding.EncodeMask(Map.RiverMask);
+        LakeMaskBytes = TerrainMapEncoding.EncodeMask(Map.LakeMask);
     }
 
     public TerrainGenerationOptions Options { get; }
@@ -37,12 +41,19 @@ public sealed class TerrainSnapshot {
 
     public byte[] HeightBytes { get; }
 
+    public byte[] WaterAccumulationBytes { get; }
+
+    public byte[] RiverMaskBytes { get; }
+
+    public byte[] LakeMaskBytes { get; }
+
     private static TerrainGenerationOptions BuildOptions(IConfiguration configuration) {
         return new TerrainGenerationOptions {
             Seed = configuration.GetValue<int?>("Terrain:DefaultSeed") ?? FallbackSeed,
             Size = configuration.GetValue<int?>("Terrain:DefaultSize") ?? FallbackSize,
             BaseAlgorithm = "diamond-square",
             ErosionPasses = configuration.GetValue<int?>("Terrain:ErosionPasses") ?? FallbackErosionPasses,
+            UpscaleFactor = configuration.GetValue<int?>("Terrain:UpscaleFactor") ?? FallbackUpscaleFactor,
         };
     }
 }
