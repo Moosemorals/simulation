@@ -6,10 +6,12 @@ namespace uk.osric.sim.terrain.Generation;
 public sealed class TerrainGenerationOrchestrator : ITerrainGenerator {
     private readonly DiamondSquareTerrainGenerator diamondSquareLayer;
     private readonly HydraulicErosionLayer hydraulicErosionLayer;
+    private readonly RiverLakeDetectionLayer riverLakeDetectionLayer;
 
     public TerrainGenerationOrchestrator() {
         diamondSquareLayer = new DiamondSquareTerrainGenerator();
         hydraulicErosionLayer = new HydraulicErosionLayer();
+        riverLakeDetectionLayer = new RiverLakeDetectionLayer();
     }
 
     public TerrainMap Generate(TerrainGenerationOptions options) {
@@ -22,11 +24,14 @@ public sealed class TerrainGenerationOrchestrator : ITerrainGenerator {
 
         float[] heightData = diamondSquareLayer.GenerateHeightData(options);
         float[] waterAccumulationData = hydraulicErosionLayer.Apply(heightData, options.Size, options.ErosionPasses);
+        (bool[] riverMask, bool[] lakeMask) = riverLakeDetectionLayer.Build(heightData, waterAccumulationData, options.Size);
 
         return new TerrainMap {
             Size = options.Size,
             HeightData = heightData,
             WaterAccumulationData = waterAccumulationData,
+            RiverMask = riverMask,
+            LakeMask = lakeMask,
         };
     }
 }

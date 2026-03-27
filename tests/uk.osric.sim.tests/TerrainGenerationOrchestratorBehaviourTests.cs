@@ -19,6 +19,8 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         Assert.Multiple(() => {
             Assert.That(first.HeightData, Is.EqualTo(second.HeightData));
             Assert.That(first.WaterAccumulationData, Is.EqualTo(second.WaterAccumulationData));
+            Assert.That(first.RiverMask, Is.EqualTo(second.RiverMask));
+            Assert.That(first.LakeMask, Is.EqualTo(second.LakeMask));
         });
     }
 
@@ -64,6 +66,21 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
             Assert.That(map.WaterAccumulationData, Has.Length.EqualTo(map.Size * map.Size));
             Assert.That(map.WaterAccumulationData, Has.All.InRange(0.0f, 1.0f));
             Assert.That(map.WaterAccumulationData, Has.Some.GreaterThan(0.05f));
+        });
+    }
+
+    [Test]
+    public void Generate_PopulatesRiverAndLakeMasksForEveryTile() {
+        TerrainGenerationOptions options = CreateDefaultOptions(2048);
+        TerrainGenerationOrchestrator generator = new();
+
+        TerrainMap map = generator.Generate(options);
+
+        Assert.Multiple(() => {
+            Assert.That(map.RiverMask, Has.Length.EqualTo(map.Size * map.Size));
+            Assert.That(map.LakeMask, Has.Length.EqualTo(map.Size * map.Size));
+            Assert.That(map.RiverMask, Has.Some.True);
+            Assert.That(map.LakeMask, Has.Some.True);
         });
     }
 
