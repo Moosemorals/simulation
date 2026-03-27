@@ -14,8 +14,8 @@ internal sealed class PositionSystem {
         this.mapSize = mapSize;
     }
 
-    internal IReadOnlyList<(EntityId Id, Position Location)> Update(float deltaTime) {
-        var changes = new List<(EntityId, Position)>();
+    internal IReadOnlyList<(EntityId Id, Position Location, float VelocityX, float VelocityY)> Update(float deltaTime) {
+        var changes = new List<(EntityId, Position, float, float)>();
 
         foreach (var (id, pos, vel, acc) in storage.Query<Position, Velocity, Acceleration>()) {
             float newVelX = vel.X + acc.X * deltaTime;
@@ -31,7 +31,7 @@ internal sealed class PositionSystem {
             storage.Set(id, new Position(newPosX, newPosY));
             storage.Set(id, new Velocity(newVelX, newVelY));
 
-            changes.Add((id, new Position(newPosX, newPosY)));
+            changes.Add((id, new Position(newPosX, newPosY), newVelX, newVelY));
         }
 
         return changes;

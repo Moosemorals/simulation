@@ -6,6 +6,7 @@ using uk.osric.sim.simulation.Ecs.Components;
 namespace uk.osric.sim.simulation.Ecs.Systems;
 
 internal sealed class SheepSpawner {
+    internal const float SheepRadius = 4f;
     private readonly EntityStorage storage;
     private readonly float mapSize;
     private readonly Random rng;
@@ -27,9 +28,10 @@ internal sealed class SheepSpawner {
                 cx + (float)(rng.NextDouble() * 40.0 - 20.0),
                 cy + (float)(rng.NextDouble() * 40.0 - 20.0)));
             storage.Set(id, new Velocity(
-                (float)(rng.NextDouble() * 10.0 - 5.0),
-                (float)(rng.NextDouble() * 10.0 - 5.0)));
+                (float)(rng.NextDouble() * 5.0 - 2.5),
+                (float)(rng.NextDouble() * 5.0 - 2.5)));
             storage.Set(id, new Acceleration(0f, 0f));
+            storage.Set(id, new Size(SheepRadius));
         }
 
         return count;

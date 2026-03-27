@@ -39,7 +39,7 @@ public sealed class SimulationHostedService : BackgroundService {
         this.logger = logger;
     }
 
-    internal bool TryGetActorSnapshot(out IReadOnlyList<SimulationActorLocationDto> actors) {
+    internal bool TryGetActorSnapshot(out IReadOnlyList<SimulationActorSnapshotDto> actors) {
         SimulationWorld? currentWorld;
         lock (worldLock) {
             currentWorld = world;
@@ -52,10 +52,13 @@ public sealed class SimulationHostedService : BackgroundService {
 
         actors = currentWorld
             .GetSheepLocations()
-            .Select(location => new SimulationActorLocationDto(
+            .Select(location => new SimulationActorSnapshotDto(
                 location.Id.Value,
                 location.Location.X,
-                location.Location.Y))
+                location.Location.Y,
+                location.VelocityX,
+                location.VelocityY,
+                location.Radius))
             .ToArray();
 
         return true;
@@ -109,7 +112,9 @@ public sealed class SimulationHostedService : BackgroundService {
                 .Select(change => new SimulationActorLocationDto(
                     change.Id.Value,
                     change.Location.X,
-                    change.Location.Y))
+                    change.Location.Y,
+                    change.VelocityX,
+                    change.VelocityY))
                 .ToArray());
 
         tickBroadcaster.Publish(tick);

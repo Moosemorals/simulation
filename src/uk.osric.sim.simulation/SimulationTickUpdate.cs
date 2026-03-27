@@ -7,4 +7,4 @@ namespace uk.osric.sim.simulation;
 
 public sealed record SimulationTickUpdate(
     int TickSequence,
-    IReadOnlyList<(Ecs.EntityId Id, Position Location)> LocationChanges);
+    IReadOnlyList<(Ecs.EntityId Id, Position Location, float VelocityX, float VelocityY)> LocationChanges);

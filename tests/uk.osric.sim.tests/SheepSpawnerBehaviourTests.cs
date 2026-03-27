@@ -57,10 +57,22 @@ public sealed class SheepSpawnerBehaviourTests {
         spawner.SpawnFlock(24);
 
         foreach (var (id, _, vel, _) in storage.Query<Position, Velocity, Acceleration>()) {
-            Assert.That(vel.X, Is.InRange(-5f, 5f),
-                $"Entity {id.Value} velocity X {vel.X} is outside [-5, 5]");
-            Assert.That(vel.Y, Is.InRange(-5f, 5f),
-                $"Entity {id.Value} velocity Y {vel.Y} is outside [-5, 5]");
+            Assert.That(vel.X, Is.InRange(-2.5f, 2.5f),
+                $"Entity {id.Value} velocity X {vel.X} is outside [-2.5, 2.5]");
+            Assert.That(vel.Y, Is.InRange(-2.5f, 2.5f),
+                $"Entity {id.Value} velocity Y {vel.Y} is outside [-2.5, 2.5]");
+        }
+    }
+
+    [Test]
+    public void SpawnFlock_AssignsExpectedSizeRadiusToAllSheep() {
+        EntityStorage storage = new();
+        SheepSpawner spawner = new(storage, 1000, new Random(42));
+        spawner.SpawnFlock(24);
+
+        foreach (var (id, _, _, _) in storage.Query<Position, Velocity, Sheep>()) {
+            Size size = storage.Get<Size>(id);
+            Assert.That(size.Radius, Is.EqualTo(SheepSpawner.SheepRadius));
         }
     }
 

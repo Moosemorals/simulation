@@ -41,12 +41,13 @@ public sealed class SimulationWorld {
         OnTickUpdate?.Invoke(tickUpdate);
     }
 
-    public IReadOnlyList<(Ecs.EntityId Id, Position Location)> GetSheepLocations() {
+    public IReadOnlyList<(Ecs.EntityId Id, Position Location, float VelocityX, float VelocityY, float Radius)> GetSheepLocations() {
         lock (syncRoot) {
-            var sheepLocations = new List<(Ecs.EntityId Id, Position Location)>();
+            var sheepLocations = new List<(Ecs.EntityId Id, Position Location, float VelocityX, float VelocityY, float Radius)>();
 
-            foreach (var (id, location, _) in storage.Query<Position, Sheep>()) {
-                sheepLocations.Add((id, location));
+            foreach (var (id, location, velocity, _) in storage.Query<Position, Velocity, Sheep>()) {
+                float radius = storage.Get<Size>(id).Radius;
+                sheepLocations.Add((id, location, velocity.X, velocity.Y, radius));
             }
 
             return sheepLocations;

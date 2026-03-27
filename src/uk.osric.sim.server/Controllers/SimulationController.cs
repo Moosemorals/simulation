@@ -25,7 +25,7 @@ public sealed class SimulationController : ControllerBase {
     }
 
     [HttpGet("actors")]
-    public ActionResult<IReadOnlyList<SimulationActorLocationDto>> GetActors() {
+    public ActionResult<IReadOnlyList<SimulationActorSnapshotDto>> GetActors() {
         if (!simulationHostedService.TryGetActorSnapshot(out var actors)) {
             return StatusCode(StatusCodes.Status503ServiceUnavailable, "Simulation is starting.");
         }

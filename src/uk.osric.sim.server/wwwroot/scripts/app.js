@@ -55,7 +55,8 @@ let terrainIndexCount = 0;
 let actorProgram = null;
 let actorVertexArray = null;
 let actorBuffer = null;
-let actorPointCount = 0;
+let actorVertexCount = 0;
+let sheepRadius = 4;
 
 function clamp(value, minValue, maxValue) {
     return Math.min(maxValue, Math.max(minValue, value));
@@ -90,6 +91,23 @@ function interpolateWrapped(previous, current, alpha, size) {
     }
 
     return wrapCoordinate(previous + (delta * alpha), size);
+}
+
+function shortestWrappedDelta(previous, current, size) {
+    if (size <= 0) {
+        return current - previous;
+    }
+
+    let delta = current - previous;
+    const halfSize = size * 0.5;
+
+    if (delta > halfSize) {
+        delta -= size;
+    } else if (delta < -halfSize) {
+        delta += size;
+    }
+
+    return delta;
 }
 
 function normalizeViewCenter() {
@@ -193,20 +211,44 @@ function decodeBase64(base64) {
     return bytes;
 }
 
-function updateActorState(actor, x, y) {
+function updateActorState(actor, x, y, velocityX, velocityY) {
     actor.previousX = actor.currentX;
     actor.previousY = actor.currentY;
     actor.currentX = x;
     actor.currentY = y;
+
+    let nextVelocityX = velocityX;
+    let nextVelocityY = velocityY;
+
+    if (!Number.isFinite(nextVelocityX) || !Number.isFinite(nextVelocityY)) {
+        const dt = Math.max(0.001, tickIntervalMs / 1000);
+        nextVelocityX = shortestWrappedDelta(actor.previousX, actor.currentX, terrainSize) / dt;
+        nextVelocityY = shortestWrappedDelta(actor.previousY, actor.currentY, terrainSize) / dt;
+    }
+
+    actor.velocityX = nextVelocityX;
+    actor.velocityY = nextVelocityY;
+
+    const speed = Math.hypot(nextVelocityX, nextVelocityY);
+    if (speed > 0.0001) {
+        actor.headingX = nextVelocityX / speed;
+        actor.headingY = nextVelocityY / speed;
+    }
 }
 
-function upsertActor(entityId, x, y) {
+function upsertActor(entityId, x, y, velocityX, velocityY) {
     const existingActor = actors.get(entityId);
 
     if (existingActor !== undefined) {
-        updateActorState(existingActor, x, y);
+        updateActorState(existingActor, x, y, velocityX, velocityY);
         return;
     }
+
+    const initialVelocityX = Number.isFinite(velocityX) ? velocityX : 0;
+    const initialVelocityY = Number.isFinite(velocityY) ? velocityY : 0;
+    const speed = Math.hypot(initialVelocityX, initialVelocityY);
+    const headingX = speed > 0.0001 ? initialVelocityX / speed : 1;
+    const headingY = speed > 0.0001 ? initialVelocityY / speed : 0;
 
     actors.set(entityId, {
         previousX: x,
@@ -215,6 +257,10 @@ function upsertActor(entityId, x, y) {
         currentY: y,
         drawX: x,
         drawY: y,
+        velocityX: initialVelocityX,
+        velocityY: initialVelocityY,
+        headingX,
+        headingY,
     });
 }
 
@@ -341,35 +387,46 @@ function createActorProgram() {
     const vertexSource = `#version 300 es
 precision highp float;
 
-layout(location = 0) in vec3 aPosition;
+layout(location = 0) in vec3 aCenter;
+layout(location = 1) in vec2 aOffset;
+layout(location = 2) in vec3 aForward;
+layout(location = 3) in vec3 aRight;
 
 uniform mat4 uModel;
 uniform mat4 uViewProjection;
-uniform float uPointSize;
+
+uniform float uHalfLength;
+uniform float uHalfWidth;
+
+out vec2 vOffset;
 
 void main() {
-    vec4 worldPosition = uModel * vec4(aPosition, 1.0);
+    vec3 world = aCenter + (aForward * (aOffset.x * uHalfLength)) + (aRight * (aOffset.y * uHalfWidth));
+    vec4 worldPosition = uModel * vec4(world, 1.0);
     gl_Position = uViewProjection * worldPosition;
-    gl_PointSize = uPointSize;
+    vOffset = aOffset;
 }
 `;
 
     const fragmentSource = `#version 300 es
 precision highp float;
 
+in vec2 vOffset;
+
 out vec4 outColor;
 
 void main() {
-    vec2 uv = (gl_PointCoord * 2.0) - 1.0;
-    float radiusSq = dot(uv, uv);
+    float radiusSq = dot(vOffset, vOffset);
     if (radiusSq > 1.0) {
         discard;
     }
 
     float edge = smoothstep(0.78, 1.0, radiusSq);
+    float nose = smoothstep(0.45, 1.0, vOffset.x) * (1.0 - smoothstep(0.35, 1.0, abs(vOffset.y)));
     vec3 fill = vec3(0.96, 0.94, 0.90);
     vec3 border = vec3(0.12, 0.10, 0.08);
-    outColor = vec4(mix(fill, border, edge), 1.0);
+    vec3 base = mix(fill, border, edge);
+    outColor = vec4(mix(base, border, nose * 0.55), 1.0);
 }
 `;
 
@@ -378,7 +435,8 @@ void main() {
         locations: {
             model: "uModel",
             viewProjection: "uViewProjection",
-            pointSize: "uPointSize",
+            halfLength: "uHalfLength",
+            halfWidth: "uHalfWidth",
         },
     };
 }
@@ -392,6 +450,16 @@ function getElevationAt(worldX, worldY) {
     const y = wrapCoordinate(Math.round(worldY), terrainSize);
     const sample = terrainHeightBytes[(y * terrainSize) + x] ?? 0;
     return (sample / 255) * terrainElevationScale;
+}
+
+function getTerrainNormalAt(worldX, worldY) {
+    if (terrainHeightBytes === null || terrainSize <= 0) {
+        return [0, 1, 0];
+    }
+
+    const x = wrapCoordinate(Math.round(worldX), terrainSize);
+    const y = wrapCoordinate(Math.round(worldY), terrainSize);
+    return getNormalAt(terrainHeightBytes, terrainSize, x, y);
 }
 
 function getNormalAt(heightBytes, size, x, y) {
@@ -503,26 +571,94 @@ function ensureActorBuffers() {
     gl.bindVertexArray(actorVertexArray);
     gl.bindBuffer(gl.ARRAY_BUFFER, actorBuffer);
     gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 11 * Float32Array.BYTES_PER_ELEMENT, 0);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 11 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT);
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 11 * Float32Array.BYTES_PER_ELEMENT, 5 * Float32Array.BYTES_PER_ELEMENT);
+    gl.enableVertexAttribArray(3);
+    gl.vertexAttribPointer(3, 3, gl.FLOAT, false, 11 * Float32Array.BYTES_PER_ELEMENT, 8 * Float32Array.BYTES_PER_ELEMENT);
     gl.bindVertexArray(null);
 }
 
 function updateActorBuffer() {
     ensureActorBuffers();
 
-    const data = new Float32Array(actors.size * 3);
+    const offsets = [
+        -1, -1,
+        1, -1,
+        1, 1,
+        -1, -1,
+        1, 1,
+        -1, 1,
+    ];
+
+    const floatsPerVertex = 11;
+    const verticesPerActor = 6;
+    const data = new Float32Array(actors.size * verticesPerActor * floatsPerVertex);
     let write = 0;
 
     for (const actor of actors.values()) {
-        data[write] = actor.drawX * terrainRenderScale;
-        data[write + 1] = getElevationAt(actor.drawX, actor.drawY) + 2;
-        data[write + 2] = actor.drawY * terrainRenderScale;
-        write += 3;
+        const centerX = actor.drawX * terrainRenderScale;
+        const centerY = getElevationAt(actor.drawX, actor.drawY) + 1.7;
+        const centerZ = actor.drawY * terrainRenderScale;
+        const normal = getTerrainNormalAt(actor.drawX, actor.drawY);
+
+        // Project heading onto the local tangent plane so the sheep body follows the ground slope.
+        let forwardX = actor.headingX;
+        let forwardY = 0;
+        let forwardZ = actor.headingY;
+        const forwardDotNormal = (forwardX * normal[0]) + (forwardY * normal[1]) + (forwardZ * normal[2]);
+        forwardX -= normal[0] * forwardDotNormal;
+        forwardY -= normal[1] * forwardDotNormal;
+        forwardZ -= normal[2] * forwardDotNormal;
+
+        const forwardLength = Math.hypot(forwardX, forwardY, forwardZ);
+        if (forwardLength > 0.0001) {
+            forwardX /= forwardLength;
+            forwardY /= forwardLength;
+            forwardZ /= forwardLength;
+        } else {
+            forwardX = 1;
+            forwardY = 0;
+            forwardZ = 0;
+        }
+
+        let rightX = (normal[1] * forwardZ) - (normal[2] * forwardY);
+        let rightY = (normal[2] * forwardX) - (normal[0] * forwardZ);
+        let rightZ = (normal[0] * forwardY) - (normal[1] * forwardX);
+        const rightLength = Math.hypot(rightX, rightY, rightZ);
+
+        if (rightLength > 0.0001) {
+            rightX /= rightLength;
+            rightY /= rightLength;
+            rightZ /= rightLength;
+        } else {
+            rightX = 0;
+            rightY = 0;
+            rightZ = 1;
+        }
+
+        for (let i = 0; i < verticesPerActor; i += 1) {
+            const offsetIndex = i * 2;
+            data[write] = centerX;
+            data[write + 1] = centerY;
+            data[write + 2] = centerZ;
+            data[write + 3] = offsets[offsetIndex];
+            data[write + 4] = offsets[offsetIndex + 1];
+            data[write + 5] = forwardX;
+            data[write + 6] = forwardY;
+            data[write + 7] = forwardZ;
+            data[write + 8] = rightX;
+            data[write + 9] = rightY;
+            data[write + 10] = rightZ;
+            write += floatsPerVertex;
+        }
     }
 
     gl.bindBuffer(gl.ARRAY_BUFFER, actorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
-    actorPointCount = actors.size;
+    actorVertexCount = actors.size * verticesPerActor;
 }
 
 function initializePrograms() {
@@ -630,7 +766,7 @@ function drawTerrainTiles() {
 }
 
 function drawActors() {
-    if (actorProgram === null || actorVertexArray === null || actorPointCount <= 0 || terrainSize <= 0) {
+    if (actorProgram === null || actorVertexArray === null || actorVertexCount <= 0 || terrainSize <= 0) {
         return;
     }
 
@@ -639,10 +775,12 @@ function drawActors() {
 
     const modelLocation = gl.getUniformLocation(actorProgram.program, actorProgram.locations.model);
     const vpLocation = gl.getUniformLocation(actorProgram.program, actorProgram.locations.viewProjection);
-    const pointSizeLocation = gl.getUniformLocation(actorProgram.program, actorProgram.locations.pointSize);
+    const halfLengthLocation = gl.getUniformLocation(actorProgram.program, actorProgram.locations.halfLength);
+    const halfWidthLocation = gl.getUniformLocation(actorProgram.program, actorProgram.locations.halfWidth);
 
     gl.uniformMatrix4fv(vpLocation, false, viewProjectionMatrix);
-    gl.uniform1f(pointSizeLocation, Math.max(4, 10 * (zoom / maxZoom) + 6));
+    gl.uniform1f(halfLengthLocation, sheepRadius * 2);
+    gl.uniform1f(halfWidthLocation, sheepRadius);
 
     const terrainWorldSize = terrainSize * terrainRenderScale;
     const tileRange = getVisibleTileRange();
@@ -651,7 +789,7 @@ function drawActors() {
             mat4IdentityInto(terrainModelMatrix);
             mat4Translate(terrainModelMatrix, tx * terrainWorldSize, 0, ty * terrainWorldSize);
             gl.uniformMatrix4fv(modelLocation, false, terrainModelMatrix);
-            gl.drawArrays(gl.POINTS, 0, actorPointCount);
+            gl.drawArrays(gl.TRIANGLES, 0, actorVertexCount);
         }
     }
 
@@ -765,7 +903,9 @@ function connectSimulationStream() {
                     continue;
                 }
 
-                upsertActor(change.entityId, change.x, change.y);
+                const velocityX = Number.isFinite(change.velocityX) ? change.velocityX : Number.NaN;
+                const velocityY = Number.isFinite(change.velocityY) ? change.velocityY : Number.NaN;
+                upsertActor(change.entityId, change.x, change.y, velocityX, velocityY);
             }
         }
 
@@ -798,8 +938,15 @@ async function loadActorsSnapshot() {
     const payload = await response.json();
     actors.clear();
 
+    const firstRadius = payload.length > 0 ? payload[0].radius : null;
+    if (Number.isFinite(firstRadius) && firstRadius > 0) {
+        sheepRadius = firstRadius;
+    }
+
     for (const actor of payload) {
-        upsertActor(actor.entityId, actor.x, actor.y);
+        const velocityX = Number.isFinite(actor.velocityX) ? actor.velocityX : 0;
+        const velocityY = Number.isFinite(actor.velocityY) ? actor.velocityY : 0;
+        upsertActor(actor.entityId, actor.x, actor.y, velocityX, velocityY);
     }
 }
 
