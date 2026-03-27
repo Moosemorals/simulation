@@ -34,19 +34,21 @@ internal sealed class SimulationHostedService : BackgroundService {
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-        SimulationWorld world = new();
+        SimulationWorld world = new(terrainSnapshot.Map, terrainSnapshot.Options);
 
         logger.LogInformation(
-            "Simulation started on terrain {Size}x{Size} at {TickRateHz} Hz",
+            "Simulation started on terrain {Size}x{Size} at {TickRateHz} Hz with {EntityCount} entities",
             terrainSnapshot.Map.Size,
             terrainSnapshot.Map.Size,
-            options.TickRateHz);
+            options.TickRateHz,
+            world.EntityCount);
 
         TimeSpan tickInterval = TimeSpan.FromSeconds(1.0 / options.TickRateHz);
+        float deltaTime = (float)tickInterval.TotalSeconds;
 
         while (!stoppingToken.IsCancellationRequested) {
             long startTimestamp = Stopwatch.GetTimestamp();
-            world.Tick();
+            world.Tick(deltaTime);
             TimeSpan elapsed = Stopwatch.GetElapsedTime(startTimestamp);
             metrics.TickDuration.Record(elapsed.TotalMilliseconds);
 

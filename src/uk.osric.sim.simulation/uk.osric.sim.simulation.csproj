@@ -6,4 +6,12 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\uk.osric.sim.terrain\uk.osric.sim.terrain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="uk.osric.sim.tests" />
+  </ItemGroup>
+
 </Project>
