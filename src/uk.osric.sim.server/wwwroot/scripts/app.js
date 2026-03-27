@@ -10,6 +10,7 @@ if (gl === null) {
 
 const minZoom = 0.35;
 const maxZoom = 3.5;
+const terrainRenderScale = 16;
 let zoom = 1;
 let zoomTarget = 1;
 let terrainSize = 0;
@@ -93,8 +94,9 @@ function interpolateWrapped(previous, current, alpha, size) {
 
 function normalizeViewCenter() {
     if (terrainSize > 0) {
-        viewCenterX = wrapCoordinate(viewCenterX, terrainSize);
-        viewCenterY = wrapCoordinate(viewCenterY, terrainSize);
+        const terrainWorldSize = terrainSize * terrainRenderScale;
+        viewCenterX = wrapCoordinate(viewCenterX, terrainWorldSize);
+        viewCenterY = wrapCoordinate(viewCenterY, terrainWorldSize);
     }
 }
 
@@ -398,8 +400,8 @@ function getNormalAt(heightBytes, size, x, y) {
     const up = heightBytes[(wrapCoordinate(y - 1, size) * size) + x] / 255;
     const down = heightBytes[(wrapCoordinate(y + 1, size) * size) + x] / 255;
 
-    const dx = (right - left) * terrainElevationScale;
-    const dz = (down - up) * terrainElevationScale;
+    const dx = ((right - left) * terrainElevationScale) / terrainRenderScale;
+    const dz = ((down - up) * terrainElevationScale) / terrainRenderScale;
     const nx = -dx;
     const ny = 2;
     const nz = -dz;
@@ -425,9 +427,9 @@ function uploadTerrainMesh(size, heightBytes) {
             const height = (heightBytes[index] / 255) * terrainElevationScale;
             const normal = getNormalAt(heightBytes, size, x, y);
 
-            vertices[offset] = x;
+            vertices[offset] = x * terrainRenderScale;
             vertices[offset + 1] = height;
-            vertices[offset + 2] = y;
+            vertices[offset + 2] = y * terrainRenderScale;
             vertices[offset + 3] = normal[0];
             vertices[offset + 4] = normal[1];
             vertices[offset + 5] = normal[2];
@@ -512,9 +514,9 @@ function updateActorBuffer() {
     let write = 0;
 
     for (const actor of actors.values()) {
-        data[write] = actor.drawX;
+        data[write] = actor.drawX * terrainRenderScale;
         data[write + 1] = getElevationAt(actor.drawX, actor.drawY) + 2;
-        data[write + 2] = actor.drawY;
+        data[write + 2] = actor.drawY * terrainRenderScale;
         write += 3;
     }
 
@@ -575,17 +577,18 @@ function getVisibleTileRange() {
         return { minTx: 0, maxTx: 0, minTy: 0, maxTy: 0 };
     }
 
+    const terrainWorldSize = terrainSize * terrainRenderScale;
     const distance = getCameraDistance();
-    const radius = Math.max(terrainSize * 0.6, distance * 0.95);
+    const radius = Math.max(terrainWorldSize * 0.6, distance * 0.95);
     const leftWorld = viewCenterX - radius;
     const rightWorld = viewCenterX + radius;
     const topWorld = viewCenterY - radius;
     const bottomWorld = viewCenterY + radius;
 
-    const minTx = Math.floor(leftWorld / terrainSize);
-    const maxTx = Math.floor(rightWorld / terrainSize);
-    const minTy = Math.floor(topWorld / terrainSize);
-    const maxTy = Math.floor(bottomWorld / terrainSize);
+    const minTx = Math.floor(leftWorld / terrainWorldSize);
+    const maxTx = Math.floor(rightWorld / terrainWorldSize);
+    const minTy = Math.floor(topWorld / terrainWorldSize);
+    const maxTy = Math.floor(bottomWorld / terrainWorldSize);
 
     return { minTx, maxTx, minTy, maxTy };
 }
@@ -608,11 +611,12 @@ function drawTerrainTiles() {
     gl.uniform3f(lightDirectionLocation, -0.5, 1.0, -0.25);
     gl.uniform1f(elevationScaleLocation, terrainElevationScale);
 
+    const terrainWorldSize = terrainSize * terrainRenderScale;
     const tileRange = getVisibleTileRange();
     for (let ty = tileRange.minTy; ty <= tileRange.maxTy; ty += 1) {
         for (let tx = tileRange.minTx; tx <= tileRange.maxTx; tx += 1) {
             mat4IdentityInto(terrainModelMatrix);
-            mat4Translate(terrainModelMatrix, tx * terrainSize, 0, ty * terrainSize);
+            mat4Translate(terrainModelMatrix, tx * terrainWorldSize, 0, ty * terrainWorldSize);
             mat4Multiply(modelViewProjectionMatrix, viewMatrix, terrainModelMatrix);
             mat3FromMat4(normalMatrix, modelViewProjectionMatrix);
 
@@ -640,11 +644,12 @@ function drawActors() {
     gl.uniformMatrix4fv(vpLocation, false, viewProjectionMatrix);
     gl.uniform1f(pointSizeLocation, Math.max(4, 10 * (zoom / maxZoom) + 6));
 
+    const terrainWorldSize = terrainSize * terrainRenderScale;
     const tileRange = getVisibleTileRange();
     for (let ty = tileRange.minTy; ty <= tileRange.maxTy; ty += 1) {
         for (let tx = tileRange.minTx; tx <= tileRange.maxTx; tx += 1) {
             mat4IdentityInto(terrainModelMatrix);
-            mat4Translate(terrainModelMatrix, tx * terrainSize, 0, ty * terrainSize);
+            mat4Translate(terrainModelMatrix, tx * terrainWorldSize, 0, ty * terrainWorldSize);
             gl.uniformMatrix4fv(modelLocation, false, terrainModelMatrix);
             gl.drawArrays(gl.POINTS, 0, actorPointCount);
         }
@@ -721,8 +726,8 @@ async function loadTerrainHeightMap() {
     zoom = clampZoom(zoom);
     zoomTarget = zoom;
     zoomAnimationActive = false;
-    viewCenterX = (size - 1) * 0.5;
-    viewCenterY = (size - 1) * 0.5;
+    viewCenterX = ((size - 1) * 0.5) * terrainRenderScale;
+    viewCenterY = ((size - 1) * 0.5) * terrainRenderScale;
     const decodeEnd = performance.now();
     const meshStart = performance.now();
     uploadTerrainMesh(size, heightBytes);
@@ -943,8 +948,8 @@ document.getElementById("reset-view").addEventListener("click", () => {
     zoom = 1;
     zoomTarget = 1;
     zoomAnimationActive = false;
-    viewCenterX = (terrainSize - 1) * 0.5;
-    viewCenterY = (terrainSize - 1) * 0.5;
+    viewCenterX = ((terrainSize - 1) * 0.5) * terrainRenderScale;
+    viewCenterY = ((terrainSize - 1) * 0.5) * terrainRenderScale;
 });
 
 window.addEventListener("resize", () => {
