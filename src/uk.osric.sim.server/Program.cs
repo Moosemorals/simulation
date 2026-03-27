@@ -3,7 +3,9 @@
 
 using Microsoft.AspNetCore.ResponseCompression;
 
+using uk.osric.sim.server.Simulation;
 using uk.osric.sim.server.Terrain;
+using uk.osric.sim.simulation.Time;
 using uk.osric.sim.terrain.Generation;
 
 namespace uk.osric.sim.server;
@@ -22,9 +24,10 @@ public static class Program {
 		builder.Services.AddHealthChecks();
 		builder.Services.AddSingleton<ITerrainGenerator, TerrainGenerationOrchestrator>();
 		builder.Services.AddSingleton<TerrainSnapshot>();
+		builder.Services.Configure<SimulationOptions>(builder.Configuration.GetSection("Simulation"));
+		builder.Services.AddHostedService<SimulationHostedService>();
 
 		WebApplication app = builder.Build();
-		_ = app.Services.GetRequiredService<TerrainSnapshot>();
 
 		if (app.Environment.IsDevelopment()) {
 			app.UseDeveloperExceptionPage();
