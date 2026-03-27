@@ -8,7 +8,7 @@ using uk.osric.sim.terrain.Generation;
 namespace uk.osric.sim.calibrate;
 
 internal static class Program {
-    private const int Size = 513;
+    private const int Size = 129;
     private const int Seed = 42;
     private const int MaxPasses = 1_000_000;
     private static readonly TimeSpan LowBound = TimeSpan.FromSeconds(9);

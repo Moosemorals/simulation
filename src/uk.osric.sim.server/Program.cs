@@ -17,6 +17,16 @@ public static class Program {
 		WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 		builder.WebHost.UseUrls("http://localhost:5000");
 
+		string appBaseDirectory = AppContext.BaseDirectory;
+		builder.Configuration.AddJsonFile(Path.Combine(appBaseDirectory, "appsettings.json"), optional: true, reloadOnChange: true);
+		builder.Configuration.AddJsonFile(
+			Path.Combine(appBaseDirectory, $"appsettings.{builder.Environment.EnvironmentName}.json"),
+			optional: true,
+			reloadOnChange: true);
+
+		builder.Logging.ClearProviders();
+		builder.Logging.AddConsole();
+
 		builder.Services.AddResponseCompression(options => {
 			options.EnableForHttps = true;
 			options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/json"]);
