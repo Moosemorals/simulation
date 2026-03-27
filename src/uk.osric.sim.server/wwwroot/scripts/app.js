@@ -436,6 +436,15 @@ document.getElementById("pan-down").addEventListener("click", () => panByViewpor
 document.getElementById("pan-left").addEventListener("click", () => panByViewportRatio(0.1, 0));
 document.getElementById("pan-right").addEventListener("click", () => panByViewportRatio(-0.1, 0));
 
+document.getElementById("reset-view").addEventListener("click", () => {
+    if (terrainTextureCanvas === null) {
+        return;
+    }
+    zoom = 1;
+    viewCenterX = terrainTextureCanvas.width * 0.5;
+    viewCenterY = terrainTextureCanvas.height * 0.5;
+});
+
 renderPlaceholder();
 startRenderLoop();
 Promise.all([loadTerrainSeed(), loadTerrainHeightMap()]).catch((error) => {
