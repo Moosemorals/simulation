@@ -3,6 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 
+using uk.osric.sim.contracts.Terrain;
 using uk.osric.sim.terrain.Generation;
 
 namespace uk.osric.sim.server.Controllers;
@@ -11,7 +12,7 @@ namespace uk.osric.sim.server.Controllers;
 [Route("api/terrain")]
 public sealed class TerrainController : ControllerBase {
     [HttpGet("seed")]
-    public ActionResult<TerrainGenerationOptions> GetSeed() {
+    public ActionResult<TerrainSeedDto> GetSeed() {
         TerrainGenerationOptions options = new() {
             Seed = 1729,
             Width = 512,
@@ -22,6 +23,16 @@ public sealed class TerrainController : ControllerBase {
             ErosionPasses = 1,
         };
 
-        return Ok(options);
+        TerrainSeedDto dto = new(
+            options.Seed,
+            options.Width,
+            options.Height,
+            options.WrapHorizontally,
+            options.WrapVertically,
+            options.BaseAlgorithm,
+            options.ErosionPasses
+        );
+
+        return Ok(dto);
     }
 }

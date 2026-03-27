@@ -1,0 +1,65 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Server: main worktree",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build:server-main",
+      "program": "${workspaceFolder}/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Server: terrain worktree",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build:server-terrain-worktree",
+      "program": "${workspaceFolder}/../simulation-terrain/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
+      "cwd": "${workspaceFolder}/../simulation-terrain",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Server: simulation worktree",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build:server-simulation-worktree",
+      "program": "${workspaceFolder}/../simulation-simulation/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
+      "cwd": "${workspaceFolder}/../simulation-simulation",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Server: server worktree",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build:server-server-worktree",
+      "program": "${workspaceFolder}/../simulation-server/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
+      "cwd": "${workspaceFolder}/../simulation-server",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Server: frontend worktree",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build:server-frontend-worktree",
+      "program": "${workspaceFolder}/../simulation-frontend/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
+      "cwd": "${workspaceFolder}/../simulation-frontend",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  ]
+}

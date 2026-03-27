@@ -4,10 +4,12 @@ Initial scaffold for a medieval low-fantasy simulation built as parallel modules
 
 ## Modules
 
+- `src/uk.osric.sim.contracts`: shared cross-module DTOs and small integration contracts.
 - `src/uk.osric.sim.terrain`: terrain generation contracts and placeholder domain types.
 - `src/uk.osric.sim.simulation`: ECS and tick-timing skeleton for the first simulation slice.
 - `src/uk.osric.sim.server`: ASP.NET Core host for health checks, terrain delivery, SSE, and static asset hosting.
 - `src/uk.osric.sim.frontend`: standalone frontend assets served by the server through linked static content.
+- `tests/uk.osric.sim.tests`: top-level NUnit project for behaviour-focused unit tests.
 
 ## Working Model
 
@@ -19,4 +21,6 @@ Initial scaffold for a medieval low-fantasy simulation built as parallel modules
 
 ```powershell
 dotnet build uk.osric.sim.slnx
+
+dotnet test uk.osric.sim.slnx
 ```

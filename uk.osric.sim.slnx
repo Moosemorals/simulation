@@ -1,7 +1,11 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/uk.osric.sim.contracts/uk.osric.sim.contracts.csproj" />
     <Project Path="src/uk.osric.sim.server/uk.osric.sim.server.csproj" />
     <Project Path="src/uk.osric.sim.simulation/uk.osric.sim.simulation.csproj" />
     <Project Path="src/uk.osric.sim.terrain/uk.osric.sim.terrain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/uk.osric.sim.tests/uk.osric.sim.tests.csproj" />
   </Folder>
 </Solution>

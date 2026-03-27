@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <ProjectReference Include="..\uk.osric.sim.contracts\uk.osric.sim.contracts.csproj" />
     <ProjectReference Include="..\uk.osric.sim.terrain\uk.osric.sim.terrain.csproj" />
     <ProjectReference Include="..\uk.osric.sim.simulation\uk.osric.sim.simulation.csproj" />
   </ItemGroup>

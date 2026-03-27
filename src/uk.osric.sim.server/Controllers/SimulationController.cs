@@ -1,8 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
+using System.Text.Json;
+
 using Microsoft.AspNetCore.Mvc;
 
+using uk.osric.sim.contracts.Simulation;
 using uk.osric.sim.simulation.Time;
 
 namespace uk.osric.sim.server.Controllers;
@@ -19,7 +22,8 @@ public sealed class SimulationController : ControllerBase {
         int sequence = 0;
 
         while (!cancellationToken.IsCancellationRequested) {
-            string payload = $"{{\"sequence\":{sequence},\"tickRateHz\":{SimulationOptions.DefaultTickRateHz}}}";
+            SimulationTickDto dto = new(sequence, SimulationOptions.DefaultTickRateHz, DateTimeOffset.UtcNow);
+            string payload = JsonSerializer.Serialize(dto);
 
             await Response.WriteAsync($"event: tick\n", cancellationToken);
             await Response.WriteAsync($"data: {payload}\n\n", cancellationToken);

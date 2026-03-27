@@ -17,6 +17,19 @@
   - `SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>`
   - `SPDX-License-Identifier: ISC`
 
+# Environment and Tooling
+
+- The primary development environment is Windows.
+- Prefer PowerShell-native commands and tooling for automation.
+- Do not assume `rg` is available; use PowerShell alternatives such as `Select-String` and `Get-ChildItem` for search operations.
+
+# Testing and Completion Criteria
+
+- Add or update unit tests for behaviour whenever production code changes.
+- Prioritize high-value behavioural tests over low-value structure tests.
+- A task is not complete until relevant high-value tests pass locally.
+- For each completed task, run and report the exact test command used.
+
 # Code Style
 
 - Follow K&R brace style.
