@@ -3,22 +3,11 @@
 
 namespace uk.osric.sim.terrain.Generation;
 
-public sealed class DiamondSquareTerrainGenerator : ITerrainGenerator {
-    public TerrainMap Generate(TerrainGenerationOptions options) {
+internal sealed class DiamondSquareTerrainGenerator {
+    public float[] GenerateHeightData(TerrainGenerationOptions options) {
         ArgumentNullException.ThrowIfNull(options);
-        options.Validate();
 
-        if (!string.Equals(options.BaseAlgorithm, "diamond-square", StringComparison.OrdinalIgnoreCase)) {
-            throw new NotSupportedException($"Unsupported terrain algorithm '{options.BaseAlgorithm}'.");
-        }
-
-        int size = options.Size;
-        float[] heightData = GenerateHeightField(size, options.Seed, options.InitialDisplacement, options.Roughness);
-
-        return new TerrainMap {
-            Size = size,
-            HeightData = heightData,
-        };
+        return GenerateHeightField(options.Size, options.Seed, options.InitialDisplacement, options.Roughness);
     }
 
     private static float[] GenerateHeightField(int size, int seed, float initialDisplacement, float roughness) {
