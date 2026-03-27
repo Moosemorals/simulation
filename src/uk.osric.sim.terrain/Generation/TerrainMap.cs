@@ -4,9 +4,17 @@
 namespace uk.osric.sim.terrain.Generation;
 
 public sealed class TerrainMap {
-    public required int Width { get; init; }
-
-    public required int Height { get; init; }
+    public required int Size { get; init; }
 
     public required float[] HeightData { get; init; }
+
+    public float[] WaterAccumulationData { get; init; } = [];
+
+    public bool[] RiverMask { get; init; } = [];
+
+    public bool[] LakeMask { get; init; } = [];
+
+    public byte[] BiomeData { get; init; } = [];
+
+    public IReadOnlyList<SettlementCandidate> SettlementCandidates { get; init; } = [];
 }
