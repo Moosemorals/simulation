@@ -10,10 +10,10 @@ internal sealed class HydraulicErosionLayer {
         for (int pass = 0; pass < erosionPasses; pass++) {
             ErodeAndDeposit(heightData, finalAccumulation, size);
             EnforceToroidalSeams(heightData, size);
-            Normalize(heightData);
             finalAccumulation = BuildFlowAccumulation(heightData, size);
         }
 
+        Normalize(heightData);
         NormalizeToMax(finalAccumulation);
         EnforceToroidalSeams(finalAccumulation, size);
         return finalAccumulation;

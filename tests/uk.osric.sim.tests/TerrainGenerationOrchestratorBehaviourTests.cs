@@ -97,6 +97,19 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         Assert.That(erodedMap.HeightData, Is.Not.EqualTo(baseMap.HeightData));
     }
 
+    [Test]
+    public void Generate_MoreErosionPasses_ProducesMoreErosion() {
+        TerrainGenerationOrchestrator generator = new();
+
+        TerrainGenerationOptions fewPasses = new() { Seed = 42, Size = 9, ErosionPasses = 1 };
+        TerrainGenerationOptions manyPasses = new() { Seed = 42, Size = 9, ErosionPasses = 100 };
+
+        TerrainMap lightlyEroded = generator.Generate(fewPasses);
+        TerrainMap heavilyEroded = generator.Generate(manyPasses);
+
+        Assert.That(heavilyEroded.HeightData, Is.Not.EqualTo(lightlyEroded.HeightData));
+    }
+
     private static TerrainGenerationOptions CreateDefaultOptions(int seed, int erosionPasses = 1) {
         return new TerrainGenerationOptions {
             Seed = seed,
