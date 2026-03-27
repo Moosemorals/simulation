@@ -3,6 +3,8 @@
 
 using Microsoft.AspNetCore.ResponseCompression;
 
+using OpenTelemetry.Metrics;
+
 using uk.osric.sim.server.Simulation;
 using uk.osric.sim.server.Terrain;
 using uk.osric.sim.simulation.Time;
@@ -25,7 +27,22 @@ public static class Program {
 		builder.Services.AddSingleton<ITerrainGenerator, TerrainGenerationOrchestrator>();
 		builder.Services.AddSingleton<TerrainSnapshot>();
 		builder.Services.Configure<SimulationOptions>(builder.Configuration.GetSection("Simulation"));
+		builder.Services.AddSingleton<SimulationMetrics>();
 		builder.Services.AddHostedService<SimulationHostedService>();
+
+		builder.Services.AddOpenTelemetry()
+			.WithMetrics(metrics => {
+				metrics
+					.AddAspNetCoreInstrumentation()
+					.AddRuntimeInstrumentation()
+					.AddMeter(SimulationMetrics.MeterName)
+					.AddPrometheusExporter();
+
+				string? otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
+				if (!string.IsNullOrEmpty(otlpEndpoint)) {
+					metrics.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+				}
+			});
 
 		WebApplication app = builder.Build();
 
@@ -34,6 +51,7 @@ public static class Program {
 		}
 
 		app.UseResponseCompression();
+		app.UseOpenTelemetryPrometheusScrapingEndpoint();
 		app.UseDefaultFiles();
 		app.UseStaticFiles();
 
