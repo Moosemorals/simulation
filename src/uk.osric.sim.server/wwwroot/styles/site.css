@@ -90,8 +90,14 @@ pre {
 .viewport-toolbar {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
+    align-items: center;
+    gap: 12px;
     margin-bottom: 12px;
+}
+
+.zoom-controls {
+    display: flex;
+    gap: 8px;
 }
 
 .viewport-toolbar button {
@@ -105,17 +111,53 @@ pre {
     cursor: pointer;
 }
 
+.pan-controls {
+    display: grid;
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(3, 40px);
+    gap: 6px;
+}
+
+.pan-up {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.pan-left {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.pan-right {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.pan-down {
+    grid-column: 2;
+    grid-row: 3;
+}
+
 #sim-canvas {
     width: 100%;
     height: auto;
     display: block;
     border-radius: 16px;
     background: linear-gradient(180deg, #6f8f63 0%, #375447 100%);
+    cursor: grab;
+}
+
+#sim-canvas.is-dragging {
+    cursor: grabbing;
 }
 
 @media (max-width: 720px) {
     .layout {
         width: min(100% - 20px, 1120px);
         padding-top: 20px;
+    }
+
+    .viewport-toolbar {
+        justify-content: space-between;
     }
 }

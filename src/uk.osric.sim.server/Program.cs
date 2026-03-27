@@ -15,7 +15,7 @@ namespace uk.osric.sim.server;
 public static class Program {
 	public static void Main(string[] args) {
 		WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-		builder.WebHost.UseUrls("http://localhost:5000");
+		builder.WebHost.UseUrls("http://localhost:5001");
 
 		builder.Services.AddResponseCompression(options => {
 			options.EnableForHttps = true;
@@ -28,7 +28,9 @@ public static class Program {
 		builder.Services.AddSingleton<TerrainSnapshot>();
 		builder.Services.Configure<SimulationOptions>(builder.Configuration.GetSection("Simulation"));
 		builder.Services.AddSingleton<SimulationMetrics>();
-		builder.Services.AddHostedService<SimulationHostedService>();
+		builder.Services.AddSingleton<SimulationTickBroadcaster>();
+		builder.Services.AddSingleton<SimulationHostedService>();
+		builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<SimulationHostedService>());
 
 		builder.Services.AddOpenTelemetry()
 			.WithMetrics(metrics => {

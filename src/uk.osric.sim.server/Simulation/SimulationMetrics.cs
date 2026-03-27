@@ -5,7 +5,7 @@ using System.Diagnostics.Metrics;
 
 namespace uk.osric.sim.server.Simulation;
 
-internal sealed class SimulationMetrics {
+public sealed class SimulationMetrics {
     public const string MeterName = "uk.osric.sim.simulation";
 
     public SimulationMetrics(IMeterFactory meterFactory) {

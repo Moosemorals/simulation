@@ -23,3 +23,9 @@ dotnet build uk.osric.sim.slnx
 
 dotnet test uk.osric.sim.slnx
 ```
+
+## Lessons Learned
+
+- Keep frontend and server JSON casing aligned for live contracts (especially SSE payloads). The frontend stream handler expects camelCase fields such as `sequence` and `locationChanges`.
+- When manually serializing SSE payloads with `System.Text.Json`, use web defaults (`JsonSerializerDefaults.Web`) so payload names match browser-side expectations.
+- If simulation appears static in the viewport, verify stream payload shape first before changing movement logic. In this case, sheep were moving server-side, but frontend updates were ignored due to payload field-name mismatch.

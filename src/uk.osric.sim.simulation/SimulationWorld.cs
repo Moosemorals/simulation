@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: ISC
 
 using uk.osric.sim.simulation.Ecs;
+using uk.osric.sim.simulation.Ecs.Components;
 using uk.osric.sim.simulation.Ecs.Systems;
 using uk.osric.sim.terrain.Generation;
 
@@ -10,6 +11,7 @@ namespace uk.osric.sim.simulation;
 public sealed class SimulationWorld {
     private readonly EntityStorage storage;
     private readonly PositionSystem positionSystem;
+    private readonly Lock syncRoot = new();
     private int tickSequence;
 
     public event Action<SimulationTickUpdate>? OnTickUpdate;
@@ -29,7 +31,25 @@ public sealed class SimulationWorld {
     }
 
     public void Tick(float deltaTime) {
-        var locationChanges = positionSystem.Update(deltaTime);
-        OnTickUpdate?.Invoke(new SimulationTickUpdate(++tickSequence, locationChanges));
+        SimulationTickUpdate tickUpdate;
+
+        lock (syncRoot) {
+            var locationChanges = positionSystem.Update(deltaTime);
+            tickUpdate = new SimulationTickUpdate(++tickSequence, locationChanges);
+        }
+
+        OnTickUpdate?.Invoke(tickUpdate);
+    }
+
+    public IReadOnlyList<(Ecs.EntityId Id, Position Location)> GetSheepLocations() {
+        lock (syncRoot) {
+            var sheepLocations = new List<(Ecs.EntityId Id, Position Location)>();
+
+            foreach (var (id, location, _) in storage.Query<Position, Sheep>()) {
+                sheepLocations.Add((id, location));
+            }
+
+            return sheepLocations;
+        }
     }
 }

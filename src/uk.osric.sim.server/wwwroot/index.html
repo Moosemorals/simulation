@@ -29,8 +29,16 @@
         </section>
         <section class="viewport-panel">
             <div class="viewport-toolbar">
-                <button id="zoom-in" type="button">+</button>
-                <button id="zoom-out" type="button">-</button>
+                <div class="zoom-controls" aria-label="Zoom controls">
+                    <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+                    <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
+                </div>
+                <div class="pan-controls" aria-label="Pan controls">
+                    <button id="pan-up" class="pan-up" type="button" aria-label="Pan up">▲</button>
+                    <button id="pan-left" class="pan-left" type="button" aria-label="Pan left">◀</button>
+                    <button id="pan-right" class="pan-right" type="button" aria-label="Pan right">▶</button>
+                    <button id="pan-down" class="pan-down" type="button" aria-label="Pan down">▼</button>
+                </div>
             </div>
             <canvas id="sim-canvas" width="960" height="540"></canvas>
         </section>

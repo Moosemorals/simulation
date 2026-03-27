@@ -4,8 +4,62 @@ const streamStatusElement = document.getElementById("stream-status");
 const canvas = document.getElementById("sim-canvas");
 const context = canvas.getContext("2d");
 
+const minZoom = 0.25;
+const maxZoom = 4;
 let zoom = 1;
 let terrainTextureCanvas = null;
+let viewCenterX = 0;
+let viewCenterY = 0;
+let isDragging = false;
+let lastDragPoint = null;
+const actors = new Map();
+let lastTickSequence = null;
+
+function eventToCanvasPoint(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (event.clientX - rect.left) * (canvas.width / rect.width),
+        y: (event.clientY - rect.top) * (canvas.height / rect.height),
+    };
+}
+
+function getBaseTerrainScale() {
+    if (terrainTextureCanvas === null) {
+        return 1;
+    }
+
+    const terrainSize = terrainTextureCanvas.width;
+    return Math.min(canvas.width / terrainSize, canvas.height / terrainSize);
+}
+
+function getDrawScale() {
+    return getBaseTerrainScale() * zoom;
+}
+
+function clampZoom(nextZoom) {
+    return Math.min(maxZoom, Math.max(minZoom, nextZoom));
+}
+
+function zoomAtCanvasPoint(nextZoom, anchorX, anchorY) {
+    const clampedZoom = clampZoom(nextZoom);
+    if (terrainTextureCanvas === null || Math.abs(clampedZoom - zoom) < 0.0001) {
+        zoom = clampedZoom;
+        renderTerrain();
+        return;
+    }
+
+    const currentScale = getDrawScale();
+    const nextScale = getBaseTerrainScale() * clampedZoom;
+
+    const worldX = viewCenterX + ((anchorX - canvas.width * 0.5) / currentScale);
+    const worldY = viewCenterY + ((anchorY - canvas.height * 0.5) / currentScale);
+
+    zoom = clampedZoom;
+    viewCenterX = worldX - ((anchorX - canvas.width * 0.5) / nextScale);
+    viewCenterY = worldY - ((anchorY - canvas.height * 0.5) / nextScale);
+
+    renderTerrain();
+}
 
 function renderPlaceholder() {
     if (context === null) {
@@ -78,18 +132,33 @@ function renderTerrain() {
         return;
     }
 
+    const drawScale = getDrawScale();
+
     context.clearRect(0, 0, canvas.width, canvas.height);
+    context.save();
     context.imageSmoothingEnabled = false;
+    context.setTransform(
+        drawScale,
+        0,
+        0,
+        drawScale,
+        (canvas.width * 0.5) - (viewCenterX * drawScale),
+        (canvas.height * 0.5) - (viewCenterY * drawScale));
 
-    const terrainSize = terrainTextureCanvas.width;
-    const fitScale = Math.min(canvas.width / terrainSize, canvas.height / terrainSize);
-    const drawScale = fitScale * zoom;
-    const drawWidth = terrainSize * drawScale;
-    const drawHeight = terrainSize * drawScale;
-    const drawX = (canvas.width - drawWidth) * 0.5;
-    const drawY = (canvas.height - drawHeight) * 0.5;
+    context.drawImage(terrainTextureCanvas, 0, 0, terrainTextureCanvas.width, terrainTextureCanvas.height);
 
-    context.drawImage(terrainTextureCanvas, drawX, drawY, drawWidth, drawHeight);
+    for (const actor of actors.values()) {
+        context.fillStyle = "#f7f3e6";
+        context.beginPath();
+        context.arc(actor.x, actor.y, 3.5, 0, Math.PI * 2);
+        context.fill();
+
+        context.strokeStyle = "#1c1a16";
+        context.lineWidth = 0.7;
+        context.stroke();
+    }
+
+    context.restore();
 }
 
 function updateTerrainMapStatus(size, byteCount, decodeDurationMs, renderDurationMs) {
@@ -134,6 +203,8 @@ async function loadTerrainHeightMap() {
     }
 
     terrainTextureCanvas = createTerrainTexture(size, heightBytes);
+    viewCenterX = size * 0.5;
+    viewCenterY = size * 0.5;
     const decodeEnd = performance.now();
     const renderStart = performance.now();
     renderTerrain();
@@ -144,24 +215,129 @@ async function loadTerrainHeightMap() {
 function connectSimulationStream() {
     const eventSource = new EventSource("/api/simulation/stream");
 
+    streamStatusElement.textContent = JSON.stringify({
+        status: "connecting",
+        trackedActors: actors.size,
+    }, null, 2);
+
     eventSource.addEventListener("tick", (event) => {
-        streamStatusElement.textContent = event.data;
+        const payload = JSON.parse(event.data);
+
+        if (Array.isArray(payload.locationChanges)) {
+            for (const change of payload.locationChanges) {
+                actors.set(change.entityId, { x: change.x, y: change.y });
+            }
+        }
+
+        lastTickSequence = payload.sequence;
+        streamStatusElement.textContent = JSON.stringify({
+            status: "connected",
+            sequence: payload.sequence,
+            changes: Array.isArray(payload.locationChanges) ? payload.locationChanges.length : 0,
+            trackedActors: actors.size,
+        }, null, 2);
+        renderTerrain();
     });
 
     eventSource.onerror = () => {
-        streamStatusElement.textContent = "Simulation stream disconnected.";
+        streamStatusElement.textContent = JSON.stringify({
+            status: "disconnected",
+            lastSequence: lastTickSequence,
+            trackedActors: actors.size,
+        }, null, 2);
     };
 }
 
-document.getElementById("zoom-in").addEventListener("click", () => {
-    zoom = Math.min(zoom + 0.1, 2);
+async function loadActorsSnapshot() {
+    const response = await fetch("/api/simulation/actors");
+
+    if (!response.ok) {
+        throw new Error(`Failed to load actors (${response.status}).`);
+    }
+
+    const payload = await response.json();
+    actors.clear();
+
+    for (const actor of payload) {
+        actors.set(actor.entityId, {
+            x: actor.x,
+            y: actor.y,
+        });
+    }
+
+    renderTerrain();
+}
+
+function panByViewportRatio(xRatio, yRatio) {
+    if (terrainTextureCanvas === null) {
+        return;
+    }
+
+    const drawScale = getDrawScale();
+    const viewportWorldWidth = canvas.width / drawScale;
+    const viewportWorldHeight = canvas.height / drawScale;
+    viewCenterX += viewportWorldWidth * xRatio;
+    viewCenterY += viewportWorldHeight * yRatio;
+    renderTerrain();
+}
+
+canvas.addEventListener("wheel", (event) => {
+    event.preventDefault();
+
+    const point = eventToCanvasPoint(event);
+    const zoomFactor = Math.exp(event.deltaY * -0.0015);
+    zoomAtCanvasPoint(zoom * zoomFactor, point.x, point.y);
+}, { passive: false });
+
+canvas.addEventListener("mousedown", (event) => {
+    if (event.button !== 0) {
+        return;
+    }
+
+    isDragging = true;
+    lastDragPoint = eventToCanvasPoint(event);
+    canvas.classList.add("is-dragging");
+});
+
+canvas.addEventListener("mousemove", (event) => {
+    if (!isDragging || lastDragPoint === null || terrainTextureCanvas === null) {
+        return;
+    }
+
+    const point = eventToCanvasPoint(event);
+    const dx = point.x - lastDragPoint.x;
+    const dy = point.y - lastDragPoint.y;
+    const drawScale = getDrawScale();
+
+    viewCenterX -= dx / drawScale;
+    viewCenterY -= dy / drawScale;
+    lastDragPoint = point;
+
     renderTerrain();
 });
 
-document.getElementById("zoom-out").addEventListener("click", () => {
-    zoom = Math.max(zoom - 0.1, 0.5);
-    renderTerrain();
+function endDrag() {
+    isDragging = false;
+    lastDragPoint = null;
+    canvas.classList.remove("is-dragging");
+}
+
+canvas.addEventListener("mouseup", endDrag);
+canvas.addEventListener("mouseleave", endDrag);
+canvas.addEventListener("blur", endDrag);
+
+document.getElementById("zoom-in").addEventListener("click", () => {
+    zoomAtCanvasPoint(zoom * 1.1, canvas.width * 0.5, canvas.height * 0.5);
 });
+
+document.getElementById("zoom-out").addEventListener("click", () => {
+    zoomAtCanvasPoint(zoom / 1.1, canvas.width * 0.5, canvas.height * 0.5);
+});
+
+document.getElementById("pan-up").addEventListener("click", () => panByViewportRatio(0, -0.1));
+document.getElementById("pan-down").addEventListener("click", () => panByViewportRatio(0, 0.1));
+document.getElementById("pan-left").addEventListener("click", () => panByViewportRatio(-0.1, 0));
+document.getElementById("pan-right").addEventListener("click", () => panByViewportRatio(0.1, 0));
 
 renderPlaceholder();
 Promise.all([loadTerrainSeed(), loadTerrainHeightMap()]).catch((error) => {
@@ -170,4 +346,13 @@ Promise.all([loadTerrainSeed(), loadTerrainHeightMap()]).catch((error) => {
         terrainMapStatusElement.textContent = error instanceof Error ? error.message : String(error);
     }
 });
+
+loadActorsSnapshot().catch((error) => {
+    streamStatusElement.textContent = JSON.stringify({
+        status: "waiting-for-simulation",
+        message: error instanceof Error ? error.message : String(error),
+        trackedActors: actors.size,
+    }, null, 2);
+});
+
 connectSimulationStream();

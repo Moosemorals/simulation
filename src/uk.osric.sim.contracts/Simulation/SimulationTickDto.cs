@@ -6,5 +6,6 @@ namespace uk.osric.sim.contracts.Simulation;
 public sealed record SimulationTickDto(
     int Sequence,
     int TickRateHz,
-    DateTimeOffset TimestampUtc
+    DateTimeOffset TimestampUtc,
+    IReadOnlyList<SimulationActorLocationDto> LocationChanges
 );
