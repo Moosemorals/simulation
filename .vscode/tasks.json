@@ -49,18 +49,6 @@
       "options": {
         "cwd": "${workspaceFolder}/../simulation-server"
       }
-    },
-    {
-      "label": "build:server-frontend-worktree",
-      "type": "shell",
-      "command": "dotnet",
-      "args": [
-        "build",
-        "src/uk.osric.sim.server/uk.osric.sim.server.csproj"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}/../simulation-frontend"
-      }
     }
   ]
 }

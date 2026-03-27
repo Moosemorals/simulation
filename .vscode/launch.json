@@ -48,18 +48,6 @@
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
-    },
-    {
-      "name": "Server: frontend worktree",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build:server-frontend-worktree",
-      "program": "${workspaceFolder}/../simulation-frontend/artifacts/bin/uk.osric.sim.server/debug/uk.osric.sim.server.dll",
-      "cwd": "${workspaceFolder}/../simulation-frontend",
-      "stopAtEntry": false,
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
     }
   ]
 }

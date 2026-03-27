@@ -6,9 +6,6 @@
     <ProjectReference Include="..\uk.osric.sim.simulation\uk.osric.sim.simulation.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="..\uk.osric.sim.frontend\public\**\*.*" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
 
   <PropertyGroup>
     <AssemblyName>uk.osric.sim.server</AssemblyName>
