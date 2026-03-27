@@ -34,6 +34,7 @@
 
 - Follow K&R brace style.
 - Always use braces for `if`, `while`, `for`, and `foreach`.
+- When changing code, always check for and remove unused imports/`using` directives.
 - Prefer primary constructors where they make the code clearer.
 - Keep public APIs narrow and explicit.
 - Avoid speculative abstractions. Start with thin seams that support the current milestone.

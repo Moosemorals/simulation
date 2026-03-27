@@ -2,9 +2,12 @@
   <PropertyGroup>
     <Authors>Osric Wilkinson</Authors>
     <Company>Osric Wilkinson</Company>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);1591</NoWarn>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <UseArtifactsOutput>true</UseArtifactsOutput>
   </PropertyGroup>
