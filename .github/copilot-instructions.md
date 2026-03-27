@@ -1,6 +1,6 @@
 # Project Intent
 
-- Build a medieval low-fantasy simulation with a clear split between terrain generation, simulation, server, and frontend modules.
+- Build a medieval low-fantasy simulation with a clear split between terrain generation, simulation, and server modules.
 - Favour clean interfaces between modules. Cross-module contracts should stay small and deliberate.
 
 # Baseline Technical Rules
@@ -49,17 +49,15 @@
 - `uk.osric.sim.server`
   - Hosts the backend with ASP.NET Core.
   - Exposes `/health`.
-  - Serves terrain data to the frontend.
+  - Serves terrain data to clients.
+  - Serves static frontend assets (HTML, CSS, JS) from `wwwroot/`.
   - Uses Server-Sent Events for tick updates to clients.
   - Uses SQLite for persistence.
-- `uk.osric.sim.frontend`
-  - Owns HTML, CSS, and vanilla JavaScript.
-  - Uses a WebGL canvas with a top-down view, pan and zoom controls, and a tile-based visual language.
 
 # Delivery Guidance
 
 - Scaffold and stabilize shared contracts first, then parallelize work by module.
 - Rebase active module branches from `main` frequently, especially after shared contract changes.
 - For long-lived module branches, merge small, reviewable slices back into `main` regularly so progress stays visible to the team.
-- Keep terrain, simulation, server, and frontend changes independently buildable whenever possible.
+- Keep terrain, simulation, and server changes independently buildable whenever possible.
 - Document assumptions in the relevant module prompt or plan file before widening interfaces.

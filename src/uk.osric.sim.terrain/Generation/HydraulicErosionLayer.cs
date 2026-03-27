@@ -1,16 +1,28 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
+using System.Runtime.CompilerServices;
+
 namespace uk.osric.sim.terrain.Generation;
 
 internal sealed class HydraulicErosionLayer {
     public float[] Apply(float[] heightData, int size, int erosionPasses) {
-        float[] finalAccumulation = BuildFlowAccumulation(heightData, size);
+        int cellCount = heightData.Length;
+        WrappedCoordinateLookup wrappedCoordinates = new(size);
+        int[] downhillIndices = new int[cellCount];
+        int[] upstreamCounts = new int[cellCount];
+        int[] processingQueue = new int[cellCount];
+        float[] finalAccumulation = new float[cellCount];
+        float[] delta = new float[cellCount];
+
+        ComputeDownhillIndices(heightData, size, wrappedCoordinates, downhillIndices);
+        BuildFlowAccumulation(downhillIndices, upstreamCounts, processingQueue, finalAccumulation);
 
         for (int pass = 0; pass < erosionPasses; pass++) {
-            ErodeAndDeposit(heightData, finalAccumulation, size);
+            ErodeAndDeposit(heightData, finalAccumulation, downhillIndices, delta);
             EnforceToroidalSeams(heightData, size);
-            finalAccumulation = BuildFlowAccumulation(heightData, size);
+            ComputeDownhillIndices(heightData, size, wrappedCoordinates, downhillIndices);
+            BuildFlowAccumulation(downhillIndices, upstreamCounts, processingQueue, finalAccumulation);
         }
 
         Normalize(heightData);
@@ -19,55 +31,92 @@ internal sealed class HydraulicErosionLayer {
         return finalAccumulation;
     }
 
-    private static float[] BuildFlowAccumulation(float[] heightData, int size) {
-        int cellCount = heightData.Length;
-        float[] accumulation = new float[cellCount];
-        int[] indices = new int[cellCount];
-
-        for (int i = 0; i < cellCount; i++) {
-            accumulation[i] = 1.0f;
-            indices[i] = i;
-        }
-
-        Array.Sort(indices, (left, right) => heightData[right].CompareTo(heightData[left]));
-
-        for (int i = 0; i < indices.Length; i++) {
-            int currentIndex = indices[i];
-            int x = currentIndex % size;
-            int y = currentIndex / size;
-            int downhillIndex = FindSteepestDownhillIndex(heightData, size, x, y);
-
-            if (downhillIndex >= 0) {
-                accumulation[downhillIndex] += accumulation[currentIndex];
-            }
-        }
-
-        return accumulation;
-    }
-
-    private static void ErodeAndDeposit(float[] heightData, float[] accumulation, int size) {
-        float[] delta = new float[heightData.Length];
+    private static void ComputeDownhillIndices(float[] heightData, int size, WrappedCoordinateLookup wrappedCoordinates, int[] downhillIndices) {
+        int[] previous = wrappedCoordinates.Previous;
+        int[] next = wrappedCoordinates.Next;
 
         for (int y = 0; y < size; y++) {
+            int upRow = previous[y] * size;
+            int currentRow = y * size;
+            int downRow = next[y] * size;
+
             for (int x = 0; x < size; x++) {
-                int index = y * size + x;
-                int downhillIndex = FindSteepestDownhillIndex(heightData, size, x, y);
-                if (downhillIndex < 0) {
-                    continue;
-                }
+                int currentIndex = currentRow + x;
+                float currentHeight = heightData[currentIndex];
+                int left = previous[x];
+                int right = next[x];
+                int bestIndex = -1;
+                float bestDrop = 0.0f;
 
-                float slope = heightData[index] - heightData[downhillIndex];
-                if (slope <= 0.0f) {
-                    continue;
-                }
+                ConsiderNeighbor(heightData, upRow + left, currentHeight, ref bestDrop, ref bestIndex);
+                ConsiderNeighbor(heightData, upRow + x, currentHeight, ref bestDrop, ref bestIndex);
+                ConsiderNeighbor(heightData, upRow + right, currentHeight, ref bestDrop, ref bestIndex);
+                ConsiderNeighbor(heightData, currentRow + left, currentHeight, ref bestDrop, ref bestIndex);
+                ConsiderNeighbor(heightData, currentRow + right, currentHeight, ref bestDrop, ref bestIndex);
+                ConsiderNeighbor(heightData, downRow + left, currentHeight, ref bestDrop, ref bestIndex);
+                ConsiderNeighbor(heightData, downRow + x, currentHeight, ref bestDrop, ref bestIndex);
+                ConsiderNeighbor(heightData, downRow + right, currentHeight, ref bestDrop, ref bestIndex);
 
-                float flowFactor = accumulation[index] / (size * size);
-                float erosion = MathF.Min(heightData[index] * 0.15f, slope * flowFactor * 0.35f);
-                float deposition = erosion * 0.25f;
-
-                delta[index] -= erosion;
-                delta[downhillIndex] += deposition;
+                downhillIndices[currentIndex] = bestIndex;
             }
+        }
+    }
+
+    private static void BuildFlowAccumulation(int[] downhillIndices, int[] upstreamCounts, int[] processingQueue, float[] accumulation) {
+        Array.Fill(accumulation, 1.0f);
+        Array.Clear(upstreamCounts);
+
+        for (int i = 0; i < downhillIndices.Length; i++) {
+            int downhillIndex = downhillIndices[i];
+            if (downhillIndex >= 0) {
+                upstreamCounts[downhillIndex]++;
+            }
+        }
+
+        int queueLength = 0;
+        for (int i = 0; i < downhillIndices.Length; i++) {
+            if (upstreamCounts[i] == 0) {
+                processingQueue[queueLength++] = i;
+            }
+        }
+
+        for (int queueIndex = 0; queueIndex < queueLength; queueIndex++) {
+            int currentIndex = processingQueue[queueIndex];
+            int downhillIndex = downhillIndices[currentIndex];
+            if (downhillIndex < 0) {
+                continue;
+            }
+
+            accumulation[downhillIndex] += accumulation[currentIndex];
+            upstreamCounts[downhillIndex]--;
+
+            if (upstreamCounts[downhillIndex] == 0) {
+                processingQueue[queueLength++] = downhillIndex;
+            }
+        }
+    }
+
+    private static void ErodeAndDeposit(float[] heightData, float[] accumulation, int[] downhillIndices, float[] delta) {
+        Array.Clear(delta);
+        float inverseCellCount = 1.0f / heightData.Length;
+
+        for (int i = 0; i < heightData.Length; i++) {
+            int downhillIndex = downhillIndices[i];
+            if (downhillIndex < 0) {
+                continue;
+            }
+
+            float slope = heightData[i] - heightData[downhillIndex];
+            if (slope <= 0.0f) {
+                continue;
+            }
+
+            float flowFactor = accumulation[i] * inverseCellCount;
+            float erosion = MathF.Min(heightData[i] * 0.15f, slope * flowFactor * 0.35f);
+            float deposition = erosion * 0.25f;
+
+            delta[i] -= erosion;
+            delta[downhillIndex] += deposition;
         }
 
         for (int i = 0; i < heightData.Length; i++) {
@@ -75,39 +124,40 @@ internal sealed class HydraulicErosionLayer {
         }
     }
 
-    private static int FindSteepestDownhillIndex(float[] heightData, int size, int x, int y) {
-        int bestIndex = -1;
-        float currentHeight = heightData[y * size + x];
-        float bestDrop = 0.0f;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ConsiderNeighbor(float[] heightData, int neighborIndex, float currentHeight, ref float bestDrop, ref int bestIndex) {
+        float drop = currentHeight - heightData[neighborIndex];
+        if (drop > bestDrop) {
+            bestDrop = drop;
+            bestIndex = neighborIndex;
+        }
+    }
 
-        for (int offsetY = -1; offsetY <= 1; offsetY++) {
-            for (int offsetX = -1; offsetX <= 1; offsetX++) {
-                if (offsetX == 0 && offsetY == 0) {
-                    continue;
-                }
+    private sealed class WrappedCoordinateLookup {
+        public WrappedCoordinateLookup(int size) {
+            Previous = new int[size];
+            Next = new int[size];
 
-                int neighborX = ToroidalGrid.Wrap(x + offsetX, size);
-                int neighborY = ToroidalGrid.Wrap(y + offsetY, size);
-                int neighborIndex = neighborY * size + neighborX;
-                float drop = currentHeight - heightData[neighborIndex];
-
-                if (drop > bestDrop) {
-                    bestDrop = drop;
-                    bestIndex = neighborIndex;
-                }
+            for (int i = 0; i < size; i++) {
+                Previous[i] = i == 0 ? size - 1 : i - 1;
+                Next[i] = i == size - 1 ? 0 : i + 1;
             }
         }
 
-        return bestIndex;
+        public int[] Previous { get; }
+
+        public int[] Next { get; }
     }
 
     private static void EnforceToroidalSeams(float[] grid, int size) {
-        for (int i = 0; i < size; i++) {
-            float topValue = ToroidalGrid.Get(grid, i, 0, size);
-            ToroidalGrid.Set(grid, i, size - 1, size, topValue);
+        int lastRowStart = (size - 1) * size;
 
-            float leftValue = ToroidalGrid.Get(grid, 0, i, size);
-            ToroidalGrid.Set(grid, size - 1, i, size, leftValue);
+        for (int i = 0; i < size; i++) {
+            float topValue = grid[i];
+            grid[lastRowStart + i] = topValue;
+
+            float leftValue = grid[i * size];
+            grid[i * size + (size - 1)] = leftValue;
         }
     }
 

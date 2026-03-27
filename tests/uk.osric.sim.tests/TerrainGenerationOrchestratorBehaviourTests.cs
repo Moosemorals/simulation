@@ -56,6 +56,27 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
     }
 
     [Test]
+    public void Generate_ProducesSeamlessToroidalWaterAccumulationEdges() {
+        TerrainGenerationOptions options = CreateDefaultOptions(42, 4);
+        TerrainGenerationOrchestrator generator = new();
+
+        TerrainMap map = generator.Generate(options);
+        int size = map.Size;
+
+        for (int i = 0; i < size; i++) {
+            float top = map.WaterAccumulationData[i];
+            float bottom = map.WaterAccumulationData[(size - 1) * size + i];
+            float left = map.WaterAccumulationData[i * size];
+            float right = map.WaterAccumulationData[i * size + (size - 1)];
+
+            Assert.Multiple(() => {
+                Assert.That(bottom, Is.EqualTo(top).Within(0.00001f));
+                Assert.That(right, Is.EqualTo(left).Within(0.00001f));
+            });
+        }
+    }
+
+    [Test]
     public void Generate_PopulatesWaterAccumulationForEveryTile() {
         TerrainGenerationOptions options = CreateDefaultOptions(2048);
         TerrainGenerationOrchestrator generator = new();
