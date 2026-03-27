@@ -1,0 +1,116 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
+// SPDX-License-Identifier: ISC
+
+namespace uk.osric.sim.terrain.Generation;
+
+internal sealed class BicubicUpscaleLayer {
+    public UpscaledTerrainData Apply(
+        float[] heightData,
+        float[] waterAccumulationData,
+        bool[] riverMask,
+        bool[] lakeMask,
+        int sourceSize,
+        int upscaleFactor) {
+        ArgumentNullException.ThrowIfNull(heightData);
+        ArgumentNullException.ThrowIfNull(waterAccumulationData);
+        ArgumentNullException.ThrowIfNull(riverMask);
+        ArgumentNullException.ThrowIfNull(lakeMask);
+
+        if (upscaleFactor <= 1) {
+            return new UpscaledTerrainData(sourceSize, heightData, waterAccumulationData, riverMask, lakeMask);
+        }
+
+        int targetSize = ((sourceSize - 1) * upscaleFactor) + 1;
+
+        float[] upscaledHeightData = UpscaleFloatGrid(heightData, sourceSize, targetSize, upscaleFactor);
+        float[] upscaledWaterAccumulationData = UpscaleFloatGrid(waterAccumulationData, sourceSize, targetSize, upscaleFactor);
+        bool[] upscaledRiverMask = UpscaleMask(riverMask, sourceSize, targetSize, upscaleFactor);
+        bool[] upscaledLakeMask = UpscaleMask(lakeMask, sourceSize, targetSize, upscaleFactor);
+
+        EnforceToroidalSeams(upscaledHeightData, targetSize);
+        EnforceToroidalSeams(upscaledWaterAccumulationData, targetSize);
+        EnforceToroidalSeams(upscaledRiverMask, targetSize);
+        EnforceToroidalSeams(upscaledLakeMask, targetSize);
+
+        return new UpscaledTerrainData(targetSize, upscaledHeightData, upscaledWaterAccumulationData, upscaledRiverMask, upscaledLakeMask);
+    }
+
+    private static float[] UpscaleFloatGrid(float[] source, int sourceSize, int targetSize, int upscaleFactor) {
+        float[] target = new float[targetSize * targetSize];
+
+        for (int y = 0; y < targetSize; y++) {
+            float sourceY = (float)y / upscaleFactor;
+            int sourceYFloor = (int)MathF.Floor(sourceY);
+            float yFraction = sourceY - sourceYFloor;
+
+            for (int x = 0; x < targetSize; x++) {
+                float sourceX = (float)x / upscaleFactor;
+                int sourceXFloor = (int)MathF.Floor(sourceX);
+                float xFraction = sourceX - sourceXFloor;
+
+                float[] rowSamples = new float[4];
+                for (int rowOffset = -1; rowOffset <= 2; rowOffset++) {
+                    int sampleY = sourceYFloor + rowOffset;
+                    rowSamples[rowOffset + 1] = CubicInterpolate(
+                        ToroidalGrid.Get(source, sourceXFloor - 1, sampleY, sourceSize),
+                        ToroidalGrid.Get(source, sourceXFloor, sampleY, sourceSize),
+                        ToroidalGrid.Get(source, sourceXFloor + 1, sampleY, sourceSize),
+                        ToroidalGrid.Get(source, sourceXFloor + 2, sampleY, sourceSize),
+                        xFraction);
+                }
+
+                target[(y * targetSize) + x] = Math.Clamp(
+                    CubicInterpolate(rowSamples[0], rowSamples[1], rowSamples[2], rowSamples[3], yFraction),
+                    0.0f,
+                    1.0f);
+            }
+        }
+
+        return target;
+    }
+
+    private static bool[] UpscaleMask(bool[] source, int sourceSize, int targetSize, int upscaleFactor) {
+        bool[] target = new bool[targetSize * targetSize];
+
+        for (int y = 0; y < targetSize; y++) {
+            int sourceY = Math.Min(y / upscaleFactor, sourceSize - 1);
+
+            for (int x = 0; x < targetSize; x++) {
+                int sourceX = Math.Min(x / upscaleFactor, sourceSize - 1);
+                target[(y * targetSize) + x] = source[(sourceY * sourceSize) + sourceX];
+            }
+        }
+
+        return target;
+    }
+
+    private static float CubicInterpolate(float p0, float p1, float p2, float p3, float t) {
+        float a = (-0.5f * p0) + (1.5f * p1) - (1.5f * p2) + (0.5f * p3);
+        float b = p0 - (2.5f * p1) + (2.0f * p2) - (0.5f * p3);
+        float c = (-0.5f * p0) + (0.5f * p2);
+        float d = p1;
+        return ((a * t + b) * t + c) * t + d;
+    }
+
+    private static void EnforceToroidalSeams(float[] grid, int size) {
+        for (int i = 0; i < size; i++) {
+            grid[((size - 1) * size) + i] = grid[i];
+            grid[(i * size) + (size - 1)] = grid[i * size];
+        }
+    }
+
+    private static void EnforceToroidalSeams(bool[] grid, int size) {
+        for (int i = 0; i < size; i++) {
+            grid[((size - 1) * size) + i] = grid[i];
+            grid[(i * size) + (size - 1)] = grid[i * size];
+        }
+    }
+}
+
+internal readonly record struct UpscaledTerrainData(
+    int Size,
+    float[] HeightData,
+    float[] WaterAccumulationData,
+    bool[] RiverMask,
+    bool[] LakeMask
+);

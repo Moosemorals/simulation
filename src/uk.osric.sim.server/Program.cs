@@ -17,6 +17,22 @@ public static class Program {
 		WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 		builder.WebHost.UseUrls("http://localhost:5001");
 
+		string appBaseDirectory = AppContext.BaseDirectory;
+		string appSettingsPath = Path.Combine(appBaseDirectory, "appsettings.json");
+		if (!File.Exists(appSettingsPath)) {
+			throw new FileNotFoundException(
+				$"Missing required configuration file 'appsettings.json'. Expected path: '{appSettingsPath}'.");
+		}
+
+		builder.Configuration.AddJsonFile(appSettingsPath, optional: false, reloadOnChange: true);
+		builder.Configuration.AddJsonFile(
+			Path.Combine(appBaseDirectory, $"appsettings.{builder.Environment.EnvironmentName}.json"),
+			optional: true,
+			reloadOnChange: true);
+
+		builder.Logging.ClearProviders();
+		builder.Logging.AddConsole();
+
 		builder.Services.AddResponseCompression(options => {
 			options.EnableForHttps = true;
 			options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/json"]);

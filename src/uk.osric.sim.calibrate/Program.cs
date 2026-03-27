@@ -11,13 +11,13 @@ internal static class Program {
     private const int Size = 513;
     private const int Seed = 42;
     private const int MaxPasses = 1_000_000;
-    private static readonly TimeSpan LowBound = TimeSpan.FromSeconds(9);
-    private static readonly TimeSpan HighBound = TimeSpan.FromSeconds(11);
-    private static readonly TimeSpan Target = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan LowBound = TimeSpan.FromSeconds(4.5);
+    private static readonly TimeSpan HighBound = TimeSpan.FromSeconds(5.5);
+    private static readonly TimeSpan Target = TimeSpan.FromSeconds(5);
 
     internal static void Main() {
         Console.WriteLine("=== Erosion Pass Calibrator ===");
-        Console.WriteLine($"Target: 10s +/-10% (9-11s), grid size: {Size}x{Size}");
+        Console.WriteLine($"Target: 5s +/-10% (4.5-5.5s), grid size: {Size}x{Size}");
         Console.WriteLine();
 
         Warmup();
@@ -98,7 +98,7 @@ internal static class Program {
             }
         }
 
-        // hi - lo == 1: pick whichever is closer to 10s (timings already captured)
+        // hi - lo == 1: pick whichever is closer to 5s (timings already captured)
         int best = Math.Abs((loTime - Target).Ticks) <= Math.Abs((hiTime - Target).Ticks) ? lo : hi;
         TimeSpan bestTime = best == lo ? loTime : hiTime;
         PrintResult(best, bestTime);
@@ -129,7 +129,7 @@ internal static class Program {
         Console.WriteLine("=== Result ===");
         Console.WriteLine($"  ErosionPasses = {passes}");
         Console.WriteLine($"  Elapsed       = {t.TotalSeconds:F2}s");
-        Console.WriteLine("  Target        = 10s +/-10%");
+        Console.WriteLine("  Target        = 5s +/-10%");
         Console.WriteLine();
         Console.WriteLine("Apply to appsettings.json:");
         Console.WriteLine($"  \"ErosionPasses\": {passes}");

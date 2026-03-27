@@ -1,0 +1,218 @@
+:root {
+    --ink: #1e1a1b;
+    --paper: #f8f2dc;
+    --panel: rgba(255, 248, 230, 0.92);
+    --accent: #94422d;
+    --accent-strong: #5e2012;
+    --sea: #1b5f87;
+    --shadow: rgba(22, 14, 8, 0.24);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: Cambria, Georgia, "Times New Roman", serif;
+    background:
+        radial-gradient(circle at 85% 12%, rgba(212, 94, 59, 0.32), transparent 34%),
+        radial-gradient(circle at 10% 85%, rgba(27, 95, 135, 0.28), transparent 44%),
+        linear-gradient(180deg, #d7bc90 0%, #b68758 45%, #8d5e39 100%);
+}
+
+.lab-layout {
+    width: min(1280px, calc(100% - 24px));
+    margin: 0 auto;
+    padding: 22px 0 32px;
+}
+
+.lab-header,
+.control-shell,
+.renders-shell {
+    border-radius: 18px;
+    border: 1px solid rgba(94, 32, 18, 0.24);
+    background: var(--panel);
+    box-shadow: 0 18px 36px var(--shadow);
+}
+
+.lab-header {
+    padding: 20px 22px;
+}
+
+.kicker {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent-strong);
+}
+
+h1 {
+    margin: 6px 0 8px;
+    line-height: 0.95;
+    font-size: clamp(1.7rem, 4.8vw, 3.2rem);
+}
+
+.lab-header p {
+    margin: 0;
+    max-width: 64ch;
+}
+
+.control-shell {
+    margin-top: 14px;
+    padding: 18px;
+}
+
+.control-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px 16px;
+}
+
+label {
+    display: grid;
+    gap: 5px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.47);
+}
+
+label span {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+}
+
+output {
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-strong);
+    font-weight: 700;
+}
+
+.slider-help {
+    display: block;
+    margin-top: 2px;
+    color: rgba(40, 28, 23, 0.82);
+    font-size: 0.82rem;
+    line-height: 1.3;
+}
+
+.action-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.toggle-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(30, 26, 27, 0.12);
+}
+
+.toggle-inline input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--sea);
+}
+
+.toggle-inline span {
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+#size-control.is-disabled {
+    opacity: 0.55;
+}
+
+button {
+    border: 0;
+    border-radius: 999px;
+    padding: 10px 20px;
+    color: #fff;
+    background: linear-gradient(140deg, var(--accent), var(--accent-strong));
+    font-weight: 700;
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+#form-status {
+    margin: 0;
+    color: #3d2e2a;
+}
+
+.renders-shell {
+    margin-top: 14px;
+    padding: 14px;
+}
+
+.render-list {
+    display: grid;
+    gap: 12px;
+}
+
+.render-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.54);
+    border: 1px solid rgba(30, 26, 27, 0.12);
+}
+
+.render-card canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #6f8f63 0%, #375447 100%);
+}
+
+.render-meta {
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(27, 95, 135, 0.1);
+    border: 1px solid rgba(27, 95, 135, 0.2);
+}
+
+.render-meta h2 {
+    margin: 0 0 6px;
+    font-size: 1.05rem;
+    color: var(--sea);
+}
+
+.copy-config {
+    margin: 0 0 8px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+}
+
+.render-meta pre {
+    margin: 0;
+    overflow: auto;
+    font-size: 0.86rem;
+    line-height: 1.35;
+}
+
+@media (max-width: 980px) {
+    .render-card {
+        grid-template-columns: 1fr;
+    }
+}

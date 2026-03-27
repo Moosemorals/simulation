@@ -6,7 +6,8 @@ using System.Runtime.CompilerServices;
 namespace uk.osric.sim.terrain.Generation;
 
 internal sealed class HydraulicErosionLayer {
-    public float[] Apply(float[] heightData, int size, int erosionPasses) {
+
+    public float[] Apply(float[] heightData, int size, int erosionPasses, HydraulicErosionTuning tuning) {
         int cellCount = heightData.Length;
         WrappedCoordinateLookup wrappedCoordinates = new(size);
         int[] downhillIndices = new int[cellCount];
@@ -15,14 +16,19 @@ internal sealed class HydraulicErosionLayer {
         float[] finalAccumulation = new float[cellCount];
         float[] delta = new float[cellCount];
 
-        ComputeDownhillIndices(heightData, size, wrappedCoordinates, downhillIndices);
-        BuildFlowAccumulation(downhillIndices, upstreamCounts, processingQueue, finalAccumulation);
+        bool includeDiagonalNeighbors = tuning.NeighborSampleCount == 8;
+
+        ComputeDownhillIndices(heightData, size, wrappedCoordinates, downhillIndices, includeDiagonalNeighbors);
+        BuildFlowAccumulation(downhillIndices, upstreamCounts, processingQueue, finalAccumulation, tuning.BaseFlow);
 
         for (int pass = 0; pass < erosionPasses; pass++) {
-            ErodeAndDeposit(heightData, finalAccumulation, downhillIndices, delta);
+            ErodeAndDeposit(heightData, finalAccumulation, downhillIndices, delta, tuning);
             EnforceToroidalSeams(heightData, size);
-            ComputeDownhillIndices(heightData, size, wrappedCoordinates, downhillIndices);
-            BuildFlowAccumulation(downhillIndices, upstreamCounts, processingQueue, finalAccumulation);
+
+            if ((pass + 1) % tuning.TopologyRefreshInterval == 0) {
+                ComputeDownhillIndices(heightData, size, wrappedCoordinates, downhillIndices, includeDiagonalNeighbors);
+                BuildFlowAccumulation(downhillIndices, upstreamCounts, processingQueue, finalAccumulation, tuning.BaseFlow);
+            }
         }
 
         Normalize(heightData);
@@ -31,7 +37,7 @@ internal sealed class HydraulicErosionLayer {
         return finalAccumulation;
     }
 
-    private static void ComputeDownhillIndices(float[] heightData, int size, WrappedCoordinateLookup wrappedCoordinates, int[] downhillIndices) {
+    private static void ComputeDownhillIndices(float[] heightData, int size, WrappedCoordinateLookup wrappedCoordinates, int[] downhillIndices, bool includeDiagonalNeighbors) {
         int[] previous = wrappedCoordinates.Previous;
         int[] next = wrappedCoordinates.Next;
 
@@ -48,22 +54,26 @@ internal sealed class HydraulicErosionLayer {
                 int bestIndex = -1;
                 float bestDrop = 0.0f;
 
-                ConsiderNeighbor(heightData, upRow + left, currentHeight, ref bestDrop, ref bestIndex);
+                // Cardinal directions only (N, W, E, S) to reduce neighbor checks from 8 to 4
                 ConsiderNeighbor(heightData, upRow + x, currentHeight, ref bestDrop, ref bestIndex);
-                ConsiderNeighbor(heightData, upRow + right, currentHeight, ref bestDrop, ref bestIndex);
                 ConsiderNeighbor(heightData, currentRow + left, currentHeight, ref bestDrop, ref bestIndex);
                 ConsiderNeighbor(heightData, currentRow + right, currentHeight, ref bestDrop, ref bestIndex);
-                ConsiderNeighbor(heightData, downRow + left, currentHeight, ref bestDrop, ref bestIndex);
                 ConsiderNeighbor(heightData, downRow + x, currentHeight, ref bestDrop, ref bestIndex);
-                ConsiderNeighbor(heightData, downRow + right, currentHeight, ref bestDrop, ref bestIndex);
+
+                if (includeDiagonalNeighbors) {
+                    ConsiderNeighbor(heightData, upRow + left, currentHeight, ref bestDrop, ref bestIndex);
+                    ConsiderNeighbor(heightData, upRow + right, currentHeight, ref bestDrop, ref bestIndex);
+                    ConsiderNeighbor(heightData, downRow + left, currentHeight, ref bestDrop, ref bestIndex);
+                    ConsiderNeighbor(heightData, downRow + right, currentHeight, ref bestDrop, ref bestIndex);
+                }
 
                 downhillIndices[currentIndex] = bestIndex;
             }
         }
     }
 
-    private static void BuildFlowAccumulation(int[] downhillIndices, int[] upstreamCounts, int[] processingQueue, float[] accumulation) {
-        Array.Fill(accumulation, 1.0f);
+    private static void BuildFlowAccumulation(int[] downhillIndices, int[] upstreamCounts, int[] processingQueue, float[] accumulation, float baseFlow) {
+        Array.Fill(accumulation, baseFlow);
         Array.Clear(upstreamCounts);
 
         for (int i = 0; i < downhillIndices.Length; i++) {
@@ -96,7 +106,7 @@ internal sealed class HydraulicErosionLayer {
         }
     }
 
-    private static void ErodeAndDeposit(float[] heightData, float[] accumulation, int[] downhillIndices, float[] delta) {
+    private static void ErodeAndDeposit(float[] heightData, float[] accumulation, int[] downhillIndices, float[] delta, HydraulicErosionTuning tuning) {
         Array.Clear(delta);
         float inverseCellCount = 1.0f / heightData.Length;
 
@@ -112,8 +122,8 @@ internal sealed class HydraulicErosionLayer {
             }
 
             float flowFactor = accumulation[i] * inverseCellCount;
-            float erosion = MathF.Min(heightData[i] * 0.15f, slope * flowFactor * 0.35f);
-            float deposition = erosion * 0.25f;
+            float erosion = MathF.Min(heightData[i] * tuning.ErosionCapFactor, slope * flowFactor * tuning.SlopeFlowFactor);
+            float deposition = erosion * tuning.DepositionRatio;
 
             delta[i] -= erosion;
             delta[downhillIndex] += deposition;

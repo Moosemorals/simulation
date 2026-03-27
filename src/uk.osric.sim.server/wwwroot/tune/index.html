@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>uk.osric.sim Terrain Lab</title>
+    <link rel="stylesheet" href="/styles/tune.css">
+</head>
+<body>
+    <main class="lab-layout">
+        <section class="lab-header">
+            <p class="kicker">Terrain Lab</p>
+            <h1>Hydraulic tuning playground</h1>
+            <p>Slide the numeric parameters, generate a fresh map, and compare results over time. New renders appear first and older runs stay visible.</p>
+        </section>
+
+        <section class="control-shell">
+            <form id="tuning-form" class="control-grid">
+                <label>
+                    <span>Seed</span>
+                    <input type="range" id="seed" min="1" max="100000" step="1">
+                    <output id="seed-value"></output>
+                    <small class="slider-help">Changes the random starting pattern. Use this to compare parameter effects across different terrain seeds.</small>
+                </label>
+                <label id="size-control">
+                    <span>Source size ($2^n + 1$)</span>
+                    <input type="range" id="sizePower" min="5" max="9" step="1">
+                    <output id="sizePower-value"></output>
+                    <small class="slider-help">Chooses only valid diamond-square dimensions: 33, 65, 129, 257, or 513. Larger values increase detail and generation cost.</small>
+                </label>
+                <label>
+                    <span>Erosion passes</span>
+                    <input type="range" id="erosionPasses" min="0" max="4000" step="1">
+                    <output id="erosionPasses-value"></output>
+                    <small class="slider-help">How many erosion iterations to run. Higher values carve stronger channels but cost more CPU time.</small>
+                </label>
+                <label>
+                    <span>Topology refresh interval</span>
+                    <input type="range" id="topologyRefreshInterval" min="1" max="64" step="1">
+                    <output id="topologyRefreshInterval-value"></output>
+                    <small class="slider-help">How often downhill flow paths are recomputed. Lower values are more accurate; higher values are faster.</small>
+                </label>
+                <label>
+                    <span>Neighbor sample count</span>
+                    <input type="range" id="neighborSampleCount" min="4" max="8" step="4">
+                    <output id="neighborSampleCount-value"></output>
+                    <small class="slider-help">4-way uses only cardinal neighbors (cheaper). 8-way includes diagonals for more natural drainage.</small>
+                </label>
+                <label>
+                    <span>Base flow</span>
+                    <input type="range" id="baseFlow" min="0.1" max="3.0" step="0.05">
+                    <output id="baseFlow-value"></output>
+                    <small class="slider-help">Minimum water volume per tile before routing. Higher values widen flow influence and can boost river coverage.</small>
+                </label>
+                <label>
+                    <span>Erosion cap factor</span>
+                    <input type="range" id="erosionCapFactor" min="0.01" max="0.6" step="0.01">
+                    <output id="erosionCapFactor-value"></output>
+                    <small class="slider-help">Upper limit of material removed per step. Important safety valve against overly aggressive terrain collapse.</small>
+                </label>
+                <label>
+                    <span>Slope-flow factor</span>
+                    <input type="range" id="slopeFlowFactor" min="0.05" max="2.5" step="0.01">
+                    <output id="slopeFlowFactor-value"></output>
+                    <small class="slider-help">Main erosion strength multiplier from slope and flow. The strongest artistic control over channel sharpness.</small>
+                </label>
+                <label>
+                    <span>Deposition ratio</span>
+                    <input type="range" id="depositionRatio" min="0.0" max="1.0" step="0.01">
+                    <output id="depositionRatio-value"></output>
+                    <small class="slider-help">Fraction of eroded material dropped downstream. Higher values fill valleys and soften deep incision.</small>
+                </label>
+                <div class="action-row">
+                    <label class="toggle-inline" for="enable-resize">
+                        <input id="enable-resize" type="checkbox">
+                        <span>Enable resizing</span>
+                    </label>
+                    <label class="toggle-inline" for="show-hydraulics">
+                        <input id="show-hydraulics" type="checkbox" checked>
+                        <span>Show blue hydraulics overlay</span>
+                    </label>
+                    <button id="generate" type="submit">Generate Render</button>
+                    <p id="form-status">Loading defaults...</p>
+                </div>
+            </form>
+        </section>
+
+        <section class="renders-shell">
+            <div id="render-list" class="render-list"></div>
+        </section>
+    </main>
+    <script src="/scripts/tune.js"></script>
+</body>
+</html>

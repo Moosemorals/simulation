@@ -7,11 +7,13 @@ public sealed class TerrainGenerationOrchestrator : ITerrainGenerator {
     private readonly DiamondSquareTerrainGenerator diamondSquareLayer;
     private readonly HydraulicErosionLayer hydraulicErosionLayer;
     private readonly RiverLakeDetectionLayer riverLakeDetectionLayer;
+    private readonly BicubicUpscaleLayer bicubicUpscaleLayer;
 
     public TerrainGenerationOrchestrator() {
         diamondSquareLayer = new DiamondSquareTerrainGenerator();
         hydraulicErosionLayer = new HydraulicErosionLayer();
         riverLakeDetectionLayer = new RiverLakeDetectionLayer();
+        bicubicUpscaleLayer = new BicubicUpscaleLayer();
     }
 
     public TerrainMap Generate(TerrainGenerationOptions options) {
@@ -23,15 +25,27 @@ public sealed class TerrainGenerationOrchestrator : ITerrainGenerator {
         }
 
         float[] heightData = diamondSquareLayer.GenerateHeightData(options);
-        float[] waterAccumulationData = hydraulicErosionLayer.Apply(heightData, options.Size, options.ErosionPasses);
+        float[] waterAccumulationData = hydraulicErosionLayer.Apply(
+            heightData,
+            options.Size,
+            options.ErosionPasses,
+            options.HydraulicErosion);
         (bool[] riverMask, bool[] lakeMask) = riverLakeDetectionLayer.Build(heightData, waterAccumulationData, options.Size);
 
+        UpscaledTerrainData upscaled = bicubicUpscaleLayer.Apply(
+            heightData,
+            waterAccumulationData,
+            riverMask,
+            lakeMask,
+            options.Size,
+            options.UpscaleFactor);
+
         return new TerrainMap {
-            Size = options.Size,
-            HeightData = heightData,
-            WaterAccumulationData = waterAccumulationData,
-            RiverMask = riverMask,
-            LakeMask = lakeMask,
+            Size = upscaled.Size,
+            HeightData = upscaled.HeightData,
+            WaterAccumulationData = upscaled.WaterAccumulationData,
+            RiverMask = upscaled.RiverMask,
+            LakeMask = upscaled.LakeMask,
         };
     }
 }

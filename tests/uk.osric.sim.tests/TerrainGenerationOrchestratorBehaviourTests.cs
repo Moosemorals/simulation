@@ -119,6 +119,53 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
     }
 
     [Test]
+    public void Generate_WithUpscaleFactor_IncreasesOutputSizeAndDataLengths() {
+        TerrainGenerationOrchestrator generator = new();
+        TerrainGenerationOptions options = new() {
+            Seed = 42,
+            Size = 9,
+            ErosionPasses = 1,
+            UpscaleFactor = 8,
+        };
+
+        TerrainMap map = generator.Generate(options);
+
+        Assert.Multiple(() => {
+            Assert.That(map.Size, Is.EqualTo(65));
+            Assert.That(map.HeightData, Has.Length.EqualTo(65 * 65));
+            Assert.That(map.WaterAccumulationData, Has.Length.EqualTo(65 * 65));
+            Assert.That(map.RiverMask, Has.Length.EqualTo(65 * 65));
+            Assert.That(map.LakeMask, Has.Length.EqualTo(65 * 65));
+        });
+    }
+
+    [Test]
+    public void Generate_WithUpscaleFactor_PreservesToroidalEdges() {
+        TerrainGenerationOrchestrator generator = new();
+        TerrainGenerationOptions options = new() {
+            Seed = 42,
+            Size = 9,
+            ErosionPasses = 4,
+            UpscaleFactor = 8,
+        };
+
+        TerrainMap map = generator.Generate(options);
+        int size = map.Size;
+
+        for (int i = 0; i < size; i++) {
+            float top = map.HeightData[i];
+            float bottom = map.HeightData[(size - 1) * size + i];
+            float left = map.HeightData[i * size];
+            float right = map.HeightData[i * size + (size - 1)];
+
+            Assert.Multiple(() => {
+                Assert.That(bottom, Is.EqualTo(top).Within(0.00001f));
+                Assert.That(right, Is.EqualTo(left).Within(0.00001f));
+            });
+        }
+    }
+
+    [Test]
     public void Generate_MoreErosionPasses_ProducesMoreErosion() {
         TerrainGenerationOrchestrator generator = new();
 
@@ -136,6 +183,7 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
             Seed = seed,
             Size = 257,
             ErosionPasses = erosionPasses,
+            UpscaleFactor = 1,
         };
     }
 }
