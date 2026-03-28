@@ -1,35 +1,6 @@
 {
   "name": "uk.osric.sim (.NET 10 on Podman)",
-  "build": {
-    "dockerfile": "Containerfile",
-    "context": ".."
-  },
+  "image":"mcr.microsoft.com/devcontainers/dotnet",
   "workspaceFolder": "/workspace/simulation",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/simulation,type=bind",
-  "remoteUser": "vscode",
-  "containerUser": "vscode",
-  "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "username": "vscode",
-      "installZsh": false,
-      "upgradePackages": false
-    }
-  },
-  "mounts": [
-    "source=uk-osric-sim-nuget-cache,target=/home/vscode/.nuget/packages,type=volume"
-  ],
-  "runArgs": [
-    "--userns=keep-id",
-    "--security-opt",
-    "label=disable"
-  ],
-  "postCreateCommand": "dotnet restore uk.osric.sim.slnx",
-  "customizations": {
-    "vscode": {
-      "settings": {
-        "dotnet.defaultSolution": "uk.osric.sim.slnx"
-      },
-      "extensions": [
-        "ms-dotnettools.csdevkit",
-        "ms-dotnettools.csharp",
-        "EditorConfig.EditorConfig"
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/simulation,type=bind"
+}
