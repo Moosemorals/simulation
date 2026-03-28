@@ -6,17 +6,17 @@
   },
   "workspaceFolder": "/workspace/simulation",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/simulation,type=bind",
-  "remoteUser": "osric",
-  "containerUser": "osric",
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
-      "username": "osric",
+      "username": "vscode",
       "installZsh": false,
       "upgradePackages": false
     }
   },
   "mounts": [
-    "source=uk-osric-sim-nuget-cache,target=/home/osric/.nuget/packages,type=volume"
+    "source=uk-osric-sim-nuget-cache,target=/home/vscode/.nuget/packages,type=volume"
   ],
   "runArgs": [
     "--userns=keep-id",
@@ -33,7 +33,3 @@
         "ms-dotnettools.csdevkit",
         "ms-dotnettools.csharp",
         "EditorConfig.EditorConfig"
-      ]
-    }
-  }
-}
