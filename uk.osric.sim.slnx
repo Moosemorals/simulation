@@ -5,10 +5,6 @@
     <Project Path="src/uk.osric.sim.simulation/uk.osric.sim.simulation.csproj" />
     <Project Path="src/uk.osric.sim.terrain/uk.osric.sim.terrain.csproj" />
   </Folder>
-  <Folder Name="/tools/">
-    <Project Path="src/uk.osric.sim.calibrate/uk.osric.sim.calibrate.csproj" />
-    <Project Path="src/uk.osric.sim.profile.erosion/uk.osric.sim.profile.erosion.csproj" />
-  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/uk.osric.sim.tests/uk.osric.sim.tests.csproj" />
   </Folder>
