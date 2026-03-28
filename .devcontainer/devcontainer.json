@@ -1,6 +1,0 @@
-{
-  "name": "uk.osric.sim (.NET 10 on Podman)",
-  "image":"mcr.microsoft.com/devcontainers/dotnet",
-  "workspaceFolder": "/workspace/simulation",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/simulation,type=bind"
-}
