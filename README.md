@@ -24,6 +24,30 @@ dotnet build uk.osric.sim.slnx
 dotnet test uk.osric.sim.slnx
 ```
 
+## Terrain Config Layout
+
+The server reads terrain generation settings from the top-level `Terrain` section in `appsettings.json`.
+
+```json
+"Terrain": {
+	"Seed": 1729,
+	"Size": 64,
+	"UpscaleFactor": 8,
+	"DiamondSquare": {
+		"SmoothnessStopStep": 8,
+		"Roughness": 0.45,
+		"InitialDisplacement": 1.0
+	},
+	"Erosion": {
+		"Raindrops": 1280,
+		"DropPathLength": 64,
+		"NeighborSampleCount": 8,
+		"ErosionStrength": 0.02,
+		"DepositionRatio": 0.25
+	}
+}
+```
+
 ## Lessons Learned
 
 - Keep frontend and server JSON casing aligned for live contracts (especially SSE payloads). The frontend stream handler expects camelCase fields such as `sequence` and `locationChanges`.

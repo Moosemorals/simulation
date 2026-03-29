@@ -65,6 +65,21 @@ h1 {
     padding: 18px;
 }
 
+#tuning-form {
+    display: grid;
+    gap: 12px;
+}
+
+.tab-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tab-panel {
+    padding: 6px 0 2px;
+}
+
 .control-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -133,10 +148,6 @@ output {
     font-weight: 600;
 }
 
-#size-control.is-disabled {
-    opacity: 0.55;
-}
-
 button {
     border: 0;
     border-radius: 999px;
@@ -150,6 +161,22 @@ button {
 button:disabled {
     opacity: 0.6;
     cursor: progress;
+}
+
+button.tab-button {
+    border-radius: 12px;
+    border: 1px solid rgba(94, 32, 18, 0.28);
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--accent-strong);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+button.tab-button[aria-selected="true"] {
+    color: #fff;
+    border-color: rgba(94, 32, 18, 0.5);
+    background: linear-gradient(140deg, var(--accent), var(--accent-strong));
 }
 
 #form-status {

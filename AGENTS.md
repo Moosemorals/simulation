@@ -133,7 +133,7 @@ int count = spawner.SpawnFlock(24);  // returns entity count
 
 ### Terrain ↔ Simulation
 
-`SimulationWorld(TerrainMap terrain, TerrainGenerationOptions options)` – Simulation reads terrain size for wrapping and
+`SimulationWorld(TerrainMap terrain, TerrainConfiguration configuration)` – Simulation reads terrain size for wrapping and
 spawn heuristics.
 
 ### Simulation ↔ Server
@@ -149,8 +149,8 @@ deltas to clients.
 
 ### Server ↔ Terrain
 
-`TerrainGenerationOrchestrator.Generate(TerrainGenerationOptions) → TerrainMap` – Deterministic output for identical
-seeds. Options include: Seed, Size, BaseAlgorithm, ErosionPasses.
+`TerrainOrchestrator.Generate(TerrainConfiguration) → TerrainMap` – Deterministic output for identical
+seeds. Configuration includes: Seed, Size, UpscaleFactor, DiamondSquare, and Erosion.
 
 ## Testing Philosophy
 
@@ -187,7 +187,7 @@ seeds. Options include: Seed, Size, BaseAlgorithm, ErosionPasses.
 - `/uk.osric.sim.slnx` – solution structure
 - `/src/uk.osric.sim.simulation/Ecs/EntityStorage.cs` – ECS foundation
 - `/src/uk.osric.sim.server/Program.cs` – DI container & hosted service setup
-- `/tests/uk.osric.sim.tests/TerrainGenerationOrchestratorBehaviourTests.cs` – determinism & toroidal edge tests
+- `/tests/uk.osric.sim.tests/TerrainOrchestratorBehaviourTests.cs` – determinism & toroidal edge tests
 - `/.github/copilot-instructions.md` – baseline project intent & rules
 
 ## When to Escalate

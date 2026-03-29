@@ -2,17 +2,12 @@
 // SPDX-License-Identifier: ISC
 
 using System.Diagnostics;
+using uk.osric.sim.contracts.Terrain;
 using uk.osric.sim.terrain;
 
 namespace uk.osric.sim.server.Terrain;
 
 public sealed class TerrainSnapshot {
-    private const int FallbackSeed = 1729;
-    private const int FallbackSize = 64;
-    private const int FallbackErosionPasses = 1;
-    private const int FallbackUpscaleFactor = 1;
-    private const int FallbackSmoothnessStopStep = 1;
-
     public TerrainSnapshot(ITerrainGenerator generator, IConfiguration configuration, ILogger<TerrainSnapshot> logger) {
         ArgumentNullException.ThrowIfNull(generator);
         ArgumentNullException.ThrowIfNull(configuration);
@@ -20,8 +15,8 @@ public sealed class TerrainSnapshot {
         Options = BuildOptions(configuration);
 
         logger.LogInformation(
-            "Generating terrain: seed={Seed}, size={Size}, erosionPasses={ErosionPasses}, upscaleFactor={UpscaleFactor}",
-            Options.Seed, Options.Size, Options.ErosionPasses, Options.UpscaleFactor);
+            "Generating terrain: seed={Seed}, size={Size}, raindrops={Raindrops}, upscaleFactor={UpscaleFactor}",
+            Options.Seed, Options.Size, Options.Erosion.Raindrops, Options.UpscaleFactor);
 
         Stopwatch sw = Stopwatch.StartNew();
         Map = generator.Generate(Options);
@@ -35,7 +30,7 @@ public sealed class TerrainSnapshot {
         LakeMaskBytes = TerrainMapEncoding.EncodeMask(Map.LakeMask);
     }
 
-    public TerrainGenerationOptions Options { get; }
+    public TerrainConfiguration Options { get; }
 
     public TerrainMap Map { get; }
 
@@ -47,22 +42,16 @@ public sealed class TerrainSnapshot {
 
     public byte[] LakeMaskBytes { get; }
 
-    private static TerrainGenerationOptions BuildOptions(IConfiguration configuration) {
-        RandomRaindropErosionTuning defaults = RandomRaindropErosionTuning.Default;
+    private static TerrainConfiguration BuildOptions(IConfiguration configuration) {
+        TerrainConfiguration terrainConfiguration = configuration
+            .GetSection("Terrain")
+            .Get<TerrainConfiguration>()
+            ?? new TerrainConfiguration {
+                Seed = 1729,
+                Size = 64,
+            };
 
-        return new TerrainGenerationOptions {
-            Seed = configuration.GetValue<int?>("Terrain:DefaultSeed") ?? FallbackSeed,
-            Size = configuration.GetValue<int?>("Terrain:DefaultSize") ?? FallbackSize,
-            BaseAlgorithm = "diamond-square",
-            ErosionPasses = configuration.GetValue<int?>("Terrain:ErosionPasses") ?? FallbackErosionPasses,
-            UpscaleFactor = configuration.GetValue<int?>("Terrain:UpscaleFactor") ?? FallbackUpscaleFactor,
-            SmoothnessStopStep = configuration.GetValue<int?>("Terrain:SmoothnessStopStep") ?? FallbackSmoothnessStopStep,
-            RaindropErosion = new RandomRaindropErosionTuning {
-                DropPathLength = configuration.GetValue<int?>("Terrain:RaindropErosion:DropPathLength") ?? defaults.DropPathLength,
-                NeighborSampleCount = configuration.GetValue<int?>("Terrain:RaindropErosion:NeighborSampleCount") ?? defaults.NeighborSampleCount,
-                ErosionStrength = configuration.GetValue<float?>("Terrain:RaindropErosion:ErosionStrength") ?? defaults.ErosionStrength,
-                DepositionRatio = configuration.GetValue<float?>("Terrain:RaindropErosion:DepositionRatio") ?? defaults.DepositionRatio,
-            },
-        };
+        terrainConfiguration.Validate();
+        return terrainConfiguration;
     }
 }

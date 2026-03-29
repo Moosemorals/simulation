@@ -22,14 +22,13 @@ public sealed class TerrainController : ControllerBase {
 
     [HttpGet("seed")]
     public ActionResult<TerrainSeedDto> GetSeed() {
-        TerrainGenerationOptions options = terrainSnapshot.Options;
+        TerrainConfiguration configuration = terrainSnapshot.Options;
         TerrainMap map = terrainSnapshot.Map;
 
         TerrainSeedDto dto = new(
-            options.Seed,
+            configuration.Seed,
             map.Size,
-            options.BaseAlgorithm,
-            options.ErosionPasses
+            configuration.Erosion.Raindrops
         );
 
         return Ok(dto);
@@ -58,63 +57,27 @@ public sealed class TerrainController : ControllerBase {
     }
 
     [HttpGet("tuning-defaults")]
-    public ActionResult<TerrainTuningDefaultsDto> GetTuningDefaults() {
-        TerrainGenerationOptions options = terrainSnapshot.Options;
-        RandomRaindropErosionTuning tuning = options.RaindropErosion;
-
-        TerrainTuningDefaultsDto dto = new(
-            options.Seed,
-            options.Size,
-            options.UpscaleFactor,
-            options.ErosionPasses,
-            tuning.DropPathLength,
-            tuning.NeighborSampleCount,
-            tuning.ErosionStrength,
-            tuning.DepositionRatio);
-
-        return Ok(dto);
+    public ActionResult<TerrainConfiguration> GetTuningDefaults() {
+        return Ok(terrainSnapshot.Options);
     }
 
     [HttpPost("render")]
-    public ActionResult<TerrainTuningRenderDto> Render([FromBody] TerrainTuningRequestDto request) {
-        TerrainGenerationOptions baseOptions = terrainSnapshot.Options;
-        TerrainGenerationOptions generationOptions = new() {
-            Seed = request.Seed,
-            Size = request.ResizeEnabled ? request.SourceSize : baseOptions.Size,
-            BaseAlgorithm = baseOptions.BaseAlgorithm,
-            ErosionPasses = request.Raindrops,
-            UpscaleFactor = baseOptions.UpscaleFactor,
-            RaindropErosion = new RandomRaindropErosionTuning {
-                DropPathLength = request.DropPathLength,
-                NeighborSampleCount = request.NeighborSampleCount,
-                ErosionStrength = request.ErosionStrength,
-                DepositionRatio = request.DepositionRatio,
-            },
-        };
-
+    public ActionResult<TerrainRenderDto> Render([FromBody] TerrainConfiguration configuration) {
         try {
-            generationOptions.Validate();
+            configuration.Validate();
         } catch (ArgumentException ex) {
             return BadRequest(new { error = ex.Message });
         }
 
-        TerrainMap map = terrainGenerator.Generate(generationOptions);
+        TerrainMap map = terrainGenerator.Generate(configuration);
         byte[] heightBytes = TerrainMapEncoding.EncodeHeight(map);
         byte[] waterBytes = TerrainMapEncoding.EncodeFloats(map.WaterAccumulationData);
         byte[] riverBytes = TerrainMapEncoding.EncodeMask(map.RiverMask);
         byte[] lakeBytes = TerrainMapEncoding.EncodeMask(map.LakeMask);
 
-        TerrainTuningRenderDto dto = new(
-            generationOptions.Seed,
-            generationOptions.Size,
+        TerrainRenderDto dto = new(
+            configuration,
             map.Size,
-            generationOptions.UpscaleFactor,
-            request.ResizeEnabled,
-            generationOptions.ErosionPasses,
-            generationOptions.RaindropErosion.DropPathLength,
-            generationOptions.RaindropErosion.NeighborSampleCount,
-            generationOptions.RaindropErosion.ErosionStrength,
-            generationOptions.RaindropErosion.DepositionRatio,
             Convert.ToBase64String(heightBytes),
             Convert.ToBase64String(waterBytes),
             Convert.ToBase64String(riverBytes),
@@ -123,49 +86,3 @@ public sealed class TerrainController : ControllerBase {
         return Ok(dto);
     }
 }
-
-public sealed record TerrainTuningDefaultsDto(
-    int Seed,
-    int Size,
-    int UpscaleFactor,
-    int Raindrops,
-    int DropPathLength,
-    int NeighborSampleCount,
-    float ErosionStrength,
-    float DepositionRatio
-);
-
-public sealed class TerrainTuningRequestDto {
-    public int Seed { get; init; }
-
-    public int SourceSize { get; init; }
-
-    public bool ResizeEnabled { get; init; }
-
-    public int Raindrops { get; init; }
-
-    public int DropPathLength { get; init; }
-
-    public int NeighborSampleCount { get; init; }
-
-    public float ErosionStrength { get; init; }
-
-    public float DepositionRatio { get; init; }
-}
-
-public sealed record TerrainTuningRenderDto(
-    int Seed,
-    int SourceSize,
-    int Size,
-    int UpscaleFactor,
-    bool ResizeEnabled,
-    int Raindrops,
-    int DropPathLength,
-    int NeighborSampleCount,
-    float ErosionStrength,
-    float DepositionRatio,
-    string HeightDataBase64,
-    string WaterAccumulationDataBase64,
-    string RiverMaskDataBase64,
-    string LakeMaskDataBase64
-);

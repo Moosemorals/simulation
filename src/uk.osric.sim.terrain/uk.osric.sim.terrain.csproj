@@ -6,4 +6,8 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\uk.osric.sim.contracts\uk.osric.sim.contracts.csproj" />
+  </ItemGroup>
+
 </Project>

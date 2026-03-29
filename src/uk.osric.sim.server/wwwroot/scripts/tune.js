@@ -3,10 +3,14 @@ const formStatus = document.getElementById("form-status");
 const renderList = document.getElementById("render-list");
 const generateButton = document.getElementById("generate");
 const showWaterOverlayToggle = document.getElementById("show-water-overlay");
-const resizeToggle = document.getElementById("enable-resize");
-const sizeControl = document.getElementById("size-control");
 const sizePowerInput = document.getElementById("sizePower");
 const sizePowerOutput = document.getElementById("sizePower-value");
+const upscalePowerInput = document.getElementById("upscalePower");
+const upscalePowerOutput = document.getElementById("upscalePower-value");
+const smoothnessPowerInput = document.getElementById("smoothnessPower");
+const smoothnessPowerOutput = document.getElementById("smoothnessPower-value");
+const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
+const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
 
 const renderEntries = [];
 
@@ -30,8 +34,34 @@ function powerFromSize(size) {
     return clamp(roundedPower, minPower, maxPower);
 }
 
+function powerFromUpscaleFactor(factor) {
+    if (factor <= 1) {
+        return Number(upscalePowerInput.min);
+    }
+
+    const exactPower = Math.log2(factor);
+    const roundedPower = Math.round(exactPower);
+    const minPower = Number(upscalePowerInput.min);
+    const maxPower = Number(upscalePowerInput.max);
+    return clamp(roundedPower, minPower, maxPower);
+}
+
+function powerFromSmoothnessStopStep(step) {
+    if (step <= 1) {
+        return Number(smoothnessPowerInput.min);
+    }
+
+    const exactPower = Math.log2(step);
+    const roundedPower = Math.round(exactPower);
+    const minPower = Number(smoothnessPowerInput.min);
+    const maxPower = Number(smoothnessPowerInput.max);
+    return clamp(roundedPower, minPower, maxPower);
+}
+
 const fieldIds = [
     "seed",
+    "roughness",
+    "initialDisplacement",
     "raindrops",
     "dropPathLength",
     "neighborSampleCount",
@@ -174,59 +204,88 @@ function redrawAllCards() {
     }
 }
 
+function syncSmoothnessPowerLimit() {
+    const maxSmoothnessPower = Number(sizePowerInput.value);
+    smoothnessPowerInput.max = String(maxSmoothnessPower);
+
+    if (Number(smoothnessPowerInput.value) > maxSmoothnessPower) {
+        smoothnessPowerInput.value = String(maxSmoothnessPower);
+    }
+}
+
 function updateOutputValues() {
     for (const id of fieldIds) {
         const { input, output } = fieldElements[id];
         output.textContent = input.value;
     }
 
-    const power = Number(sizePowerInput.value);
-    const selectedSize = sizeFromPower(power);
-    const resizeEnabled = resizeToggle !== null && resizeToggle.checked;
-    sizePowerOutput.textContent = resizeEnabled
-        ? `${selectedSize} (2^${power})`
-        : `${selectedSize} (locked unless resizing is enabled)`;
-}
+    const sizePower = Number(sizePowerInput.value);
+    const selectedSize = sizeFromPower(sizePower);
+    sizePowerOutput.textContent = `${selectedSize} (2^${sizePower})`;
 
-function syncResizeControlState() {
-    const enabled = resizeToggle !== null && resizeToggle.checked;
-    sizePowerInput.disabled = !enabled;
+    const upscalePower = Number(upscalePowerInput.value);
+    const selectedUpscaleFactor = sizeFromPower(upscalePower);
+    upscalePowerOutput.textContent = `${selectedUpscaleFactor} (2^${upscalePower})`;
 
-    if (sizeControl !== null) {
-        sizeControl.classList.toggle("is-disabled", !enabled);
-    }
-
-    updateOutputValues();
+    const smoothnessPower = Number(smoothnessPowerInput.value);
+    const selectedSmoothnessStopStep = sizeFromPower(smoothnessPower);
+    smoothnessPowerOutput.textContent = `${selectedSmoothnessStopStep} (2^${smoothnessPower})`;
 }
 
 function buildRequestBody() {
     return {
         seed: Number(fieldElements.seed.input.value),
-        sourceSize: sizeFromPower(Number(sizePowerInput.value)),
-        resizeEnabled: resizeToggle !== null && resizeToggle.checked,
-        raindrops: Number(fieldElements.raindrops.input.value),
-        dropPathLength: Number(fieldElements.dropPathLength.input.value),
-        neighborSampleCount: Number(fieldElements.neighborSampleCount.input.value),
-        erosionStrength: Number(fieldElements.erosionStrength.input.value),
-        depositionRatio: Number(fieldElements.depositionRatio.input.value),
+        size: sizeFromPower(Number(sizePowerInput.value)),
+        upscaleFactor: sizeFromPower(Number(upscalePowerInput.value)),
+        diamondSquare: {
+            smoothnessStopStep: sizeFromPower(Number(smoothnessPowerInput.value)),
+            roughness: Number(fieldElements.roughness.input.value),
+            initialDisplacement: Number(fieldElements.initialDisplacement.input.value),
+        },
+        erosion: {
+            raindrops: Number(fieldElements.raindrops.input.value),
+            dropPathLength: Number(fieldElements.dropPathLength.input.value),
+            neighborSampleCount: Number(fieldElements.neighborSampleCount.input.value),
+            erosionStrength: Number(fieldElements.erosionStrength.input.value),
+            depositionRatio: Number(fieldElements.depositionRatio.input.value),
+        },
     };
 }
 
-function buildConfigSnippet(payload) {
-    return JSON.stringify({
-        Terrain: {
-            DefaultSeed: payload.seed,
-            DefaultSize: payload.sourceSize,
-            UpscaleFactor: payload.upscaleFactor,
-            ErosionPasses: payload.raindrops,
-            RaindropErosion: {
-                DropPathLength: payload.dropPathLength,
-                NeighborSampleCount: payload.neighborSampleCount,
-                ErosionStrength: Number(payload.erosionStrength.toFixed(4)),
-                DepositionRatio: Number(payload.depositionRatio.toFixed(4)),
-            },
-        },
-    }, null, 2);
+function buildConfigSnippet(configuration) {
+    const lines = [
+        "  \"Terrain\": {",
+        `    \"Seed\": ${configuration.seed},`,
+        `    \"Size\": ${configuration.size},`,
+        `    \"UpscaleFactor\": ${configuration.upscaleFactor},`,
+        "    \"DiamondSquare\": {",
+        `      \"SmoothnessStopStep\": ${configuration.diamondSquare.smoothnessStopStep},`,
+        `      \"Roughness\": ${Number(configuration.diamondSquare.roughness.toFixed(4))},`,
+        `      \"InitialDisplacement\": ${Number(configuration.diamondSquare.initialDisplacement.toFixed(4))}`,
+        "    },",
+        "    \"Erosion\": {",
+        `      \"Raindrops\": ${configuration.erosion.raindrops},`,
+        `      \"DropPathLength\": ${configuration.erosion.dropPathLength},`,
+        `      \"NeighborSampleCount\": ${configuration.erosion.neighborSampleCount},`,
+        `      \"ErosionStrength\": ${Number(configuration.erosion.erosionStrength.toFixed(4))},`,
+        `      \"DepositionRatio\": ${Number(configuration.erosion.depositionRatio.toFixed(4))}`,
+        "    }",
+        "  },",
+    ];
+
+    return lines.join("\n");
+}
+
+function activateTab(panelId) {
+    for (const button of tabButtons) {
+        const isSelected = button.dataset.panel === panelId;
+        button.setAttribute("aria-selected", String(isSelected));
+    }
+
+    for (const panel of tabPanels) {
+        const isSelected = panel.id === panelId;
+        panel.hidden = !isSelected;
+    }
 }
 
 async function writeClipboardText(text) {
@@ -264,22 +323,30 @@ function addRenderCard(payload, elapsedMs) {
 
     const details = document.createElement("pre");
     details.textContent = JSON.stringify({
-        seed: payload.seed,
-        sourceSize: payload.sourceSize,
-        renderedSize: payload.size,
-        upscaleFactor: payload.upscaleFactor,
-        resizeEnabled: payload.resizeEnabled,
-        raindrops: payload.raindrops,
-        dropPathLength: payload.dropPathLength,
-        neighborSampleCount: payload.neighborSampleCount,
-        erosionStrength: Number(payload.erosionStrength.toFixed(3)),
-        depositionRatio: Number(payload.depositionRatio.toFixed(3)),
+        configuration: {
+            seed: payload.configuration.seed,
+            size: payload.configuration.size,
+            upscaleFactor: payload.configuration.upscaleFactor,
+            diamondSquare: {
+                smoothnessStopStep: payload.configuration.diamondSquare.smoothnessStopStep,
+                roughness: Number(payload.configuration.diamondSquare.roughness.toFixed(3)),
+                initialDisplacement: Number(payload.configuration.diamondSquare.initialDisplacement.toFixed(3)),
+            },
+            erosion: {
+                raindrops: payload.configuration.erosion.raindrops,
+                dropPathLength: payload.configuration.erosion.dropPathLength,
+                neighborSampleCount: payload.configuration.erosion.neighborSampleCount,
+                erosionStrength: Number(payload.configuration.erosion.erosionStrength.toFixed(3)),
+                depositionRatio: Number(payload.configuration.erosion.depositionRatio.toFixed(3)),
+            },
+        },
+        renderedSize: payload.renderedSize,
         elapsedMs: Number(elapsedMs.toFixed(2)),
     }, null, 2);
 
     copyButton.addEventListener("click", async () => {
         const defaultLabel = "Copy to config";
-        const snippet = buildConfigSnippet(payload);
+        const snippet = buildConfigSnippet(payload.configuration);
         copyButton.disabled = true;
 
         try {
@@ -306,11 +373,11 @@ function addRenderCard(payload, elapsedMs) {
     const riverBytes = decodeBase64(payload.riverMaskDataBase64);
     const lakeBytes = decodeBase64(payload.lakeMaskDataBase64);
 
-    drawCompositeMap(canvas, payload.size, heightBytes, waterBytes, riverBytes, lakeBytes);
+    drawCompositeMap(canvas, payload.renderedSize, heightBytes, waterBytes, riverBytes, lakeBytes);
 
     renderEntries.push({
         canvas,
-        size: payload.size,
+        size: payload.renderedSize,
         heightBytes,
         waterBytes,
         riverBytes,
@@ -329,11 +396,16 @@ async function loadDefaults() {
     const defaults = await response.json();
     fieldElements.seed.input.value = defaults.seed;
     sizePowerInput.value = powerFromSize(defaults.size);
-    fieldElements.raindrops.input.value = defaults.raindrops;
-    fieldElements.dropPathLength.input.value = defaults.dropPathLength;
-    fieldElements.neighborSampleCount.input.value = defaults.neighborSampleCount;
-    fieldElements.erosionStrength.input.value = defaults.erosionStrength;
-    fieldElements.depositionRatio.input.value = defaults.depositionRatio;
+    upscalePowerInput.value = powerFromUpscaleFactor(defaults.upscaleFactor);
+    smoothnessPowerInput.value = powerFromSmoothnessStopStep(defaults.diamondSquare.smoothnessStopStep);
+    fieldElements.roughness.input.value = defaults.diamondSquare.roughness;
+    fieldElements.initialDisplacement.input.value = defaults.diamondSquare.initialDisplacement;
+    fieldElements.raindrops.input.value = defaults.erosion.raindrops;
+    fieldElements.dropPathLength.input.value = defaults.erosion.dropPathLength;
+    fieldElements.neighborSampleCount.input.value = defaults.erosion.neighborSampleCount;
+    fieldElements.erosionStrength.input.value = defaults.erosion.erosionStrength;
+    fieldElements.depositionRatio.input.value = defaults.erosion.depositionRatio;
+    syncSmoothnessPowerLimit();
     updateOutputValues();
 }
 
@@ -384,6 +456,30 @@ if (sizePowerOutput === null) {
     missingElements.push("sizePower-value");
 }
 
+if (upscalePowerInput === null) {
+    missingElements.push("upscalePower");
+}
+
+if (upscalePowerOutput === null) {
+    missingElements.push("upscalePower-value");
+}
+
+if (smoothnessPowerInput === null) {
+    missingElements.push("smoothnessPower");
+}
+
+if (smoothnessPowerOutput === null) {
+    missingElements.push("smoothnessPower-value");
+}
+
+if (tabButtons.length === 0) {
+    missingElements.push("tab-buttons");
+}
+
+if (tabPanels.length === 0) {
+    missingElements.push("tab-panels");
+}
+
 for (const id of fieldIds) {
     const { input, output } = fieldElements[id];
 
@@ -404,11 +500,16 @@ if (missingElements.length > 0) {
         input.addEventListener("input", updateOutputValues);
     }
 
-    sizePowerInput.addEventListener("input", updateOutputValues);
+    sizePowerInput.addEventListener("input", () => {
+        syncSmoothnessPowerLimit();
+        updateOutputValues();
+    });
+    upscalePowerInput.addEventListener("input", updateOutputValues);
+    smoothnessPowerInput.addEventListener("input", updateOutputValues);
 
-    if (resizeToggle !== null) {
-        resizeToggle.addEventListener("change", () => {
-            syncResizeControlState();
+    for (const button of tabButtons) {
+        button.addEventListener("click", () => {
+            activateTab(button.dataset.panel);
         });
     }
 
@@ -434,7 +535,7 @@ if (missingElements.length > 0) {
     });
 
     loadDefaults().then(() => {
-        syncResizeControlState();
+        activateTab("general-panel");
         formStatus.textContent = "Defaults loaded. Adjust sliders and generate.";
     }).catch((error) => {
         formStatus.textContent = error instanceof Error ? error.message : String(error);

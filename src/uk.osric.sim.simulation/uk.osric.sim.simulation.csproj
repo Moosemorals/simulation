@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\uk.osric.sim.contracts\uk.osric.sim.contracts.csproj" />
     <ProjectReference Include="..\uk.osric.sim.terrain\uk.osric.sim.terrain.csproj" />
   </ItemGroup>
 

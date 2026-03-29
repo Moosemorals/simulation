@@ -42,7 +42,7 @@
 # Architecture Boundaries
 
 - `uk.osric.sim.terrain`
-  - Owns toroidal map generation, diamond-square terrain shaping, erosion passes, river and lake placement, biome assignment, and settlement siting heuristics.
+  - Owns toroidal map generation, diamond-square terrain shaping, raindrop erosion tuning, river and lake placement, biome assignment, and settlement siting heuristics.
 - `uk.osric.sim.simulation`
   - Owns ECS primitives, simulation timing, entity state, systems, and AI layers.
   - The first playable slice is sheep and wolves with movement, flocking, hunger, sleep, and predator avoidance.

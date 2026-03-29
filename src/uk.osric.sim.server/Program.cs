@@ -40,7 +40,7 @@ public static class Program {
 
 		builder.Services.AddControllers();
 		builder.Services.AddHealthChecks();
-		builder.Services.AddSingleton<ITerrainGenerator, TerrainGenerationOrchestrator>();
+		builder.Services.AddSingleton<ITerrainGenerator, TerrainOrchestrator>();
 		builder.Services.AddSingleton<TerrainSnapshot>();
 		builder.Services.Configure<SimulationOptions>(builder.Configuration.GetSection("Simulation"));
 		builder.Services.AddSingleton<SimulationMetrics>();

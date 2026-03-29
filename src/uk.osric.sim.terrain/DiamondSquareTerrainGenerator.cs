@@ -1,13 +1,20 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
+using uk.osric.sim.contracts.Terrain;
+
 namespace uk.osric.sim.terrain;
 
 internal sealed class DiamondSquareTerrainGenerator {
-    public static Torus<float> GenerateHeightData(TerrainGenerationOptions options) {
-        ArgumentNullException.ThrowIfNull(options);
+    public static Torus<float> GenerateHeightData(TerrainConfiguration configuration) {
+        ArgumentNullException.ThrowIfNull(configuration);
 
-        return GenerateHeightField(options.Size, options.Seed, options.InitialDisplacement, options.Roughness, options.SmoothnessStopStep);
+        return GenerateHeightField(
+            configuration.Size,
+            configuration.Seed,
+            configuration.DiamondSquare.InitialDisplacement,
+            configuration.DiamondSquare.Roughness,
+            configuration.DiamondSquare.SmoothnessStopStep);
     }
 
     private static Torus<float> GenerateHeightField(int size, int seed, float initialDisplacement, float roughness, int smoothnessStopStep) {

@@ -1,20 +1,22 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
+using uk.osric.sim.contracts.Terrain;
+
 namespace uk.osric.sim.terrain;
 
-internal sealed class RandomRaindropErosionLayer {
-    public static Torus<float> Apply(Torus<float> heightData, int size, int erosionPasses, int seed, RandomRaindropErosionTuning tuning) {
+internal sealed class ErosionLayer {
+    public static Torus<float> Apply(Torus<float> heightData, int size, int seed, TerrainErosionConfiguration configuration) {
         Torus<float> waterAccumulation = new(size);
-        bool includeDiagonalNeighbors = tuning.NeighborSampleCount == 8;
+        bool includeDiagonalNeighbors = configuration.NeighborSampleCount == 8;
         Random random = new(seed);
 
-        for (int drop = 0; drop < erosionPasses; drop++) {
+        for (int drop = 0; drop < configuration.Raindrops; drop++) {
             int x = random.Next(size);
             int y = random.Next(size);
             float carriedSediment = 0.0f;
 
-            for (int step = 0; step < tuning.DropPathLength; step++) {
+            for (int step = 0; step < configuration.DropPathLength; step++) {
                 waterAccumulation[x, y] += 1.0f;
 
                 bool hasNeighbor = TryFindDownhillNeighbor(heightData, x, y, includeDiagonalNeighbors, out int nextX, out int nextY);
@@ -25,13 +27,13 @@ internal sealed class RandomRaindropErosionLayer {
                     break;
                 }
 
-                float erosion = MathF.Min(heightData[x, y], tuning.ErosionStrength);
+                float erosion = MathF.Min(heightData[x, y], configuration.ErosionStrength);
                 if (erosion > 0.0f) {
                     heightData[x, y] -= erosion;
                     carriedSediment += erosion;
                 }
 
-                float deposited = carriedSediment * tuning.DepositionRatio;
+                float deposited = carriedSediment * configuration.DepositionRatio;
                 if (deposited > 0.0f) {
                     heightData[nextX, nextY] += deposited;
                     carriedSediment -= deposited;

@@ -3,6 +3,7 @@
 
 using NUnit.Framework;
 
+using uk.osric.sim.contracts.Terrain;
 using uk.osric.sim.simulation;
 using uk.osric.sim.terrain;
 
@@ -46,11 +47,11 @@ public sealed class SimulationWorldBehaviourTests {
             LakeMask = new Torus<bool>(size),
         };
 
-        TerrainGenerationOptions options = new() {
+        TerrainConfiguration configuration = new() {
             Seed = seed,
             Size = size,
         };
 
-        return new SimulationWorld(map, options);
+        return new SimulationWorld(map, configuration);
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
+using uk.osric.sim.contracts.Terrain;
 using uk.osric.sim.simulation.Ecs;
 using uk.osric.sim.simulation.Ecs.Components;
 using uk.osric.sim.simulation.Ecs.Systems;
@@ -18,11 +19,11 @@ public sealed class SimulationWorld {
 
     public int EntityCount { get; }
 
-    public SimulationWorld(TerrainMap terrain, TerrainGenerationOptions terrainOptions) {
+    public SimulationWorld(TerrainMap terrain, TerrainConfiguration terrainConfiguration) {
         ArgumentNullException.ThrowIfNull(terrain);
-        ArgumentNullException.ThrowIfNull(terrainOptions);
+        ArgumentNullException.ThrowIfNull(terrainConfiguration);
 
-        Random rng = new(terrainOptions.Seed);
+        Random rng = new(terrainConfiguration.Seed);
         storage = new EntityStorage();
         positionSystem = new PositionSystem(storage, terrain.Size);
 

@@ -15,54 +15,89 @@
         </section>
 
         <section class="control-shell">
-            <form id="tuning-form" class="control-grid">
-                <label>
-                    <span>Seed</span>
-                    <input type="range" id="seed" min="1" max="100000" step="1">
-                    <output id="seed-value"></output>
-                    <small class="slider-help">Changes the random starting pattern. Use this to compare parameter effects across different terrain seeds.</small>
-                </label>
-                <label id="size-control">
-                    <span>Source size ($2^n$)</span>
-                    <input type="range" id="sizePower" min="5" max="9" step="1">
-                    <output id="sizePower-value"></output>
-                    <small class="slider-help">Chooses power-of-two dimensions: 32, 64, 128, 256, or 512. Larger values increase detail and generation cost.</small>
-                </label>
-                <label>
-                    <span>Raindrops</span>
-                    <input type="range" id="raindrops" min="0" max="100000" step="1000">
-                    <output id="raindrops-value"></output>
-                    <small class="slider-help">Total number of raindrops to simulate. Higher values carve stronger channels but cost more CPU time.</small>
-                </label>
-                <label>
-                    <span>Drop path length</span>
-                    <input type="range" id="dropPathLength" min="4" max="256" step="1">
-                    <output id="dropPathLength-value"></output>
-                    <small class="slider-help">Maximum downhill steps each raindrop can travel before stopping.</small>
-                </label>
-                <label>
-                    <span>Neighbor sample count</span>
-                    <input type="range" id="neighborSampleCount" min="4" max="8" step="4">
-                    <output id="neighborSampleCount-value"></output>
-                    <small class="slider-help">4-way uses only cardinal neighbors (cheaper). 8-way includes diagonals for more natural drainage.</small>
-                </label>
-                <label>
-                    <span>Erosion strength</span>
-                    <input type="range" id="erosionStrength" min="0.001" max="0.100" step="0.001">
-                    <output id="erosionStrength-value"></output>
-                    <small class="slider-help">Maximum amount removed from a tile each step of a raindrop path.</small>
-                </label>
-                <label>
-                    <span>Deposition ratio</span>
-                    <input type="range" id="depositionRatio" min="0.0" max="1.0" step="0.01">
-                    <output id="depositionRatio-value"></output>
-                    <small class="slider-help">Fraction of eroded material dropped downstream. Higher values fill valleys and soften deep incision.</small>
-                </label>
-                <div class="action-row">
-                    <label class="toggle-inline" for="enable-resize">
-                        <input id="enable-resize" type="checkbox">
-                        <span>Enable resizing</span>
+            <form id="tuning-form">
+                <div class="tab-list" role="tablist" aria-label="Terrain tuning groups">
+                    <button id="general-tab" class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="general-panel" data-panel="general-panel">General</button>
+                    <button id="diamond-square-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="diamond-square-panel" data-panel="diamond-square-panel">Diamond Square</button>
+                    <button id="erosion-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="erosion-panel" data-panel="erosion-panel">Erosion</button>
+                </div>
+
+                <section id="general-panel" class="tab-panel control-grid" role="tabpanel" aria-labelledby="general-tab">
+                    <label>
+                        <span>Seed</span>
+                        <input type="range" id="seed" min="1" max="100000" step="1">
+                        <output id="seed-value"></output>
+                        <small class="slider-help">Changes the random starting pattern. Use this to compare parameter effects across different terrain seeds.</small>
                     </label>
+                    <label>
+                        <span>Source size ($2^n$)</span>
+                        <input type="range" id="sizePower" min="5" max="9" step="1">
+                        <output id="sizePower-value"></output>
+                        <small class="slider-help">Chooses power-of-two dimensions: 32, 64, 128, 256, or 512. Larger values increase detail and generation cost.</small>
+                    </label>
+                    <label>
+                        <span>Upscale factor ($2^n$)</span>
+                        <input type="range" id="upscalePower" min="0" max="4" step="1">
+                        <output id="upscalePower-value"></output>
+                        <small class="slider-help">Scales the rendered output after simulation. 1 keeps native size, 2/4/8/16 increase output resolution.</small>
+                    </label>
+                </section>
+
+                <section id="diamond-square-panel" class="tab-panel control-grid" role="tabpanel" aria-labelledby="diamond-square-tab" hidden>
+                    <label>
+                        <span>Smoothness stop step ($2^n$)</span>
+                        <input type="range" id="smoothnessPower" min="0" max="9" step="1">
+                        <output id="smoothnessPower-value"></output>
+                        <small class="slider-help">Stops fine-detail passes below this spacing. Higher values produce broader landforms.</small>
+                    </label>
+                    <label>
+                        <span>Roughness</span>
+                        <input type="range" id="roughness" min="0.01" max="0.99" step="0.01">
+                        <output id="roughness-value"></output>
+                        <small class="slider-help">Controls how fast displacement strength decays each pass.</small>
+                    </label>
+                    <label>
+                        <span>Initial displacement</span>
+                        <input type="range" id="initialDisplacement" min="0.1" max="2.0" step="0.01">
+                        <output id="initialDisplacement-value"></output>
+                        <small class="slider-help">Sets the starting height displacement before roughness decay is applied.</small>
+                    </label>
+                </section>
+
+                <section id="erosion-panel" class="tab-panel control-grid" role="tabpanel" aria-labelledby="erosion-tab" hidden>
+                    <label>
+                        <span>Raindrops</span>
+                        <input type="range" id="raindrops" min="0" max="100000" step="1000">
+                        <output id="raindrops-value"></output>
+                        <small class="slider-help">Total number of raindrops to simulate. Higher values carve stronger channels but cost more CPU time.</small>
+                    </label>
+                    <label>
+                        <span>Drop path length</span>
+                        <input type="range" id="dropPathLength" min="4" max="256" step="1">
+                        <output id="dropPathLength-value"></output>
+                        <small class="slider-help">Maximum downhill steps each raindrop can travel before stopping.</small>
+                    </label>
+                    <label>
+                        <span>Neighbor sample count</span>
+                        <input type="range" id="neighborSampleCount" min="4" max="8" step="4">
+                        <output id="neighborSampleCount-value"></output>
+                        <small class="slider-help">4-way uses only cardinal neighbors (cheaper). 8-way includes diagonals for more natural drainage.</small>
+                    </label>
+                    <label>
+                        <span>Erosion strength</span>
+                        <input type="range" id="erosionStrength" min="0.001" max="0.100" step="0.001">
+                        <output id="erosionStrength-value"></output>
+                        <small class="slider-help">Maximum amount removed from a tile each step of a raindrop path.</small>
+                    </label>
+                    <label>
+                        <span>Deposition ratio</span>
+                        <input type="range" id="depositionRatio" min="0.0" max="1.0" step="0.01">
+                        <output id="depositionRatio-value"></output>
+                        <small class="slider-help">Fraction of eroded material dropped downstream. Higher values fill valleys and soften deep incision.</small>
+                    </label>
+                </section>
+
+                <div class="action-row">
                     <label class="toggle-inline" for="show-water-overlay">
                         <input id="show-water-overlay" type="checkbox" checked>
                         <span>Show blue water overlay</span>

@@ -6,6 +6,5 @@ namespace uk.osric.sim.contracts.Terrain;
 public sealed record TerrainSeedDto(
     int Seed,
     int Size,
-    string BaseAlgorithm,
-    int ErosionPasses
+    int Raindrops
 );

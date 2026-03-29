@@ -2,18 +2,19 @@
 // SPDX-License-Identifier: ISC
 
 using NUnit.Framework;
+using uk.osric.sim.contracts.Terrain;
 using uk.osric.sim.terrain;
 
 namespace uk.osric.sim.tests;
 
-public sealed class TerrainGenerationOrchestratorBehaviourTests {
+public sealed class TerrainOrchestratorBehaviourTests {
     [Test]
     public void Generate_WithSameSeedAndOptions_IsDeterministic() {
-        TerrainGenerationOptions options = CreateDefaultOptions(1729);
-        TerrainGenerationOrchestrator generator = new();
+        TerrainConfiguration configuration = CreateDefaultConfiguration(1729);
+        TerrainOrchestrator generator = new();
 
-        TerrainMap first = generator.Generate(options);
-        TerrainMap second = generator.Generate(options);
+        TerrainMap first = generator.Generate(configuration);
+        TerrainMap second = generator.Generate(configuration);
 
         Assert.Multiple(() => {
             Assert.That(Flatten(first.HeightData), Is.EqualTo(Flatten(second.HeightData)));
@@ -25,20 +26,20 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
 
     [Test]
     public void Generate_WithDifferentSeeds_ProducesDifferentHeightData() {
-        TerrainGenerationOrchestrator generator = new();
+        TerrainOrchestrator generator = new();
 
-        TerrainMap first = generator.Generate(CreateDefaultOptions(1729));
-        TerrainMap second = generator.Generate(CreateDefaultOptions(1730));
+        TerrainMap first = generator.Generate(CreateDefaultConfiguration(1729));
+        TerrainMap second = generator.Generate(CreateDefaultConfiguration(1730));
 
         Assert.That(Flatten(first.HeightData), Is.Not.EqualTo(Flatten(second.HeightData)));
     }
 
     [Test]
     public void Generate_ProducesToroidalHeightWrapping() {
-        TerrainGenerationOptions options = CreateDefaultOptions(42);
-        TerrainGenerationOrchestrator generator = new();
+        TerrainConfiguration configuration = CreateDefaultConfiguration(42);
+        TerrainOrchestrator generator = new();
 
-        TerrainMap map = generator.Generate(options);
+        TerrainMap map = generator.Generate(configuration);
         int size = map.Size;
 
         for (int i = 0; i < size; i++) {
@@ -56,10 +57,10 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
 
     [Test]
     public void Generate_ProducesToroidalWaterAccumulationWrapping() {
-        TerrainGenerationOptions options = CreateDefaultOptions(42, 4);
-        TerrainGenerationOrchestrator generator = new();
+        TerrainConfiguration configuration = CreateDefaultConfiguration(42, 4);
+        TerrainOrchestrator generator = new();
 
-        TerrainMap map = generator.Generate(options);
+        TerrainMap map = generator.Generate(configuration);
         int size = map.Size;
 
         for (int i = 0; i < size; i++) {
@@ -77,10 +78,10 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
 
     [Test]
     public void Generate_PopulatesWaterAccumulationForEveryTile() {
-        TerrainGenerationOptions options = CreateDefaultOptions(2048);
-        TerrainGenerationOrchestrator generator = new();
+        TerrainConfiguration configuration = CreateDefaultConfiguration(2048);
+        TerrainOrchestrator generator = new();
 
-        TerrainMap map = generator.Generate(options);
+        TerrainMap map = generator.Generate(configuration);
         float[] values = Flatten(map.WaterAccumulationData);
 
         Assert.Multiple(() => {
@@ -92,10 +93,10 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
 
     [Test]
     public void Generate_PopulatesRiverAndLakeMasksForEveryTile() {
-        TerrainGenerationOptions options = CreateDefaultOptions(2048);
-        TerrainGenerationOrchestrator generator = new();
+        TerrainConfiguration configuration = CreateDefaultConfiguration(2048);
+        TerrainOrchestrator generator = new();
 
-        TerrainMap map = generator.Generate(options);
+        TerrainMap map = generator.Generate(configuration);
         bool[] riverMask = Flatten(map.RiverMask);
         bool[] lakeMask = Flatten(map.LakeMask);
 
@@ -107,11 +108,11 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
     }
 
     [Test]
-    public void Generate_WithErosionPasses_ChangesHeightField() {
-        TerrainGenerationOrchestrator generator = new();
+    public void Generate_WithRaindrops_ChangesHeightField() {
+        TerrainOrchestrator generator = new();
 
-        TerrainGenerationOptions withoutErosion = CreateDefaultOptions(99, 0);
-        TerrainGenerationOptions withErosion = CreateDefaultOptions(99, 3);
+        TerrainConfiguration withoutErosion = CreateDefaultConfiguration(99, 0);
+        TerrainConfiguration withErosion = CreateDefaultConfiguration(99, 3);
 
         TerrainMap baseMap = generator.Generate(withoutErosion);
         TerrainMap erodedMap = generator.Generate(withErosion);
@@ -121,15 +122,17 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
 
     [Test]
     public void Generate_WithUpscaleFactor_IncreasesOutputSizeAndDataLengths() {
-        TerrainGenerationOrchestrator generator = new();
-        TerrainGenerationOptions options = new() {
+        TerrainOrchestrator generator = new();
+        TerrainConfiguration configuration = new() {
             Seed = 42,
             Size = 8,
-            ErosionPasses = 1,
             UpscaleFactor = 8,
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 1,
+            },
         };
 
-        TerrainMap map = generator.Generate(options);
+        TerrainMap map = generator.Generate(configuration);
 
         Assert.Multiple(() => {
             Assert.That(map.Size, Is.EqualTo(64));
@@ -142,15 +145,17 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
 
     [Test]
     public void Generate_WithUpscaleFactor_PreservesToroidalEdges() {
-        TerrainGenerationOrchestrator generator = new();
-        TerrainGenerationOptions options = new() {
+        TerrainOrchestrator generator = new();
+        TerrainConfiguration configuration = new() {
             Seed = 42,
             Size = 8,
-            ErosionPasses = 4,
             UpscaleFactor = 8,
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 4,
+            },
         };
 
-        TerrainMap map = generator.Generate(options);
+        TerrainMap map = generator.Generate(configuration);
         int size = map.Size;
 
         for (int i = 0; i < size; i++) {
@@ -167,11 +172,23 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
     }
 
     [Test]
-    public void Generate_MoreErosionPasses_ProducesMoreErosion() {
-        TerrainGenerationOrchestrator generator = new();
+    public void Generate_MoreRaindrops_ProducesMoreErosion() {
+        TerrainOrchestrator generator = new();
 
-        TerrainGenerationOptions fewPasses = new() { Seed = 42, Size = 8, ErosionPasses = 1 };
-        TerrainGenerationOptions manyPasses = new() { Seed = 42, Size = 8, ErosionPasses = 100 };
+        TerrainConfiguration fewPasses = new() {
+            Seed = 42,
+            Size = 8,
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 1,
+            },
+        };
+        TerrainConfiguration manyPasses = new() {
+            Seed = 42,
+            Size = 8,
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 100,
+            },
+        };
 
         TerrainMap lightlyEroded = generator.Generate(fewPasses);
         TerrainMap heavilyEroded = generator.Generate(manyPasses);
@@ -181,16 +198,20 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
 
     [Test]
     public void Generate_WithSmoothnessStopStep_ProducesNormalisedHeightInRange() {
-        TerrainGenerationOptions options = new() {
+        TerrainConfiguration configuration = new() {
             Seed = 42,
             Size = 64,
-            ErosionPasses = 0,
             UpscaleFactor = 1,
-            SmoothnessStopStep = 8,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 8,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
         };
-        TerrainGenerationOrchestrator generator = new();
+        TerrainOrchestrator generator = new();
 
-        TerrainMap map = generator.Generate(options);
+        TerrainMap map = generator.Generate(configuration);
         float[] values = Flatten(map.HeightData);
 
         Assert.Multiple(() => {
@@ -203,33 +224,41 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
 
     [Test]
     public void Generate_WithSmoothnessStopStep_IsDeterministic() {
-        TerrainGenerationOptions options = new() {
+        TerrainConfiguration configuration = new() {
             Seed = 1729,
             Size = 64,
-            ErosionPasses = 0,
             UpscaleFactor = 1,
-            SmoothnessStopStep = 8,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 8,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
         };
-        TerrainGenerationOrchestrator generator = new();
+        TerrainOrchestrator generator = new();
 
-        TerrainMap first = generator.Generate(options);
-        TerrainMap second = generator.Generate(options);
+        TerrainMap first = generator.Generate(configuration);
+        TerrainMap second = generator.Generate(configuration);
 
         Assert.That(Flatten(first.HeightData), Is.EqualTo(Flatten(second.HeightData)));
     }
 
     [Test]
     public void Generate_WithSmoothnessStopStep_PreservesToroidalEdges() {
-        TerrainGenerationOptions options = new() {
+        TerrainConfiguration configuration = new() {
             Seed = 42,
             Size = 64,
-            ErosionPasses = 0,
             UpscaleFactor = 1,
-            SmoothnessStopStep = 8,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 8,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
         };
-        TerrainGenerationOrchestrator generator = new();
+        TerrainOrchestrator generator = new();
 
-        TerrainMap map = generator.Generate(options);
+        TerrainMap map = generator.Generate(configuration);
         int size = map.Size;
 
         for (int i = 0; i < size; i++) {
@@ -250,18 +279,22 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         // Use a minimal map (Size=8) and stop after the very first diamond-square
         // pass so that the only filled cells are the multiples-of-4 grid.
         // A cell at (1, 0) must equal 0.75*h[0,0] + 0.25*h[4,0] (tx=0.25, ty=0).
-        TerrainGenerationOptions options = new() {
+        TerrainConfiguration configuration = new() {
             Seed = 7,
             Size = 8,
-            ErosionPasses = 0,
             UpscaleFactor = 1,
-            SmoothnessStopStep = 4,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 4,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
         };
-        TerrainGenerationOrchestrator generator = new();
+        TerrainOrchestrator generator = new();
 
         // We can only check proportionality after normalisation, so we verify
         // that (1,0) lies on the line between (0,0) and (4,0) in the normalised space.
-        TerrainMap map = generator.Generate(options);
+        TerrainMap map = generator.Generate(configuration);
         float h00 = map.HeightData[0, 0];
         float h40 = map.HeightData[4, 0];
         float h10 = map.HeightData[1, 0];
@@ -270,12 +303,14 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         Assert.That(h10, Is.EqualTo(expected).Within(0.0001f));
     }
 
-    private static TerrainGenerationOptions CreateDefaultOptions(int seed, int erosionPasses = 1) {
-        return new TerrainGenerationOptions {
+    private static TerrainConfiguration CreateDefaultConfiguration(int seed, int raindrops = 1) {
+        return new TerrainConfiguration {
             Seed = seed,
             Size = 256,
-            ErosionPasses = erosionPasses,
             UpscaleFactor = 1,
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = raindrops,
+            },
         };
     }
 
