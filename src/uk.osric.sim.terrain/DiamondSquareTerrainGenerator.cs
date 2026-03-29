@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
-namespace uk.osric.sim.terrain.Generation;
+namespace uk.osric.sim.terrain;
 
 internal sealed class DiamondSquareTerrainGenerator {
-    public float[] GenerateHeightData(TerrainGenerationOptions options) {
+    public static float[] GenerateHeightData(TerrainGenerationOptions options) {
         ArgumentNullException.ThrowIfNull(options);
 
         return GenerateHeightField(options.Size, options.Seed, options.InitialDisplacement, options.Roughness);

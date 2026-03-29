@@ -4,7 +4,7 @@
 using uk.osric.sim.simulation.Ecs;
 using uk.osric.sim.simulation.Ecs.Components;
 using uk.osric.sim.simulation.Ecs.Systems;
-using uk.osric.sim.terrain.Generation;
+using uk.osric.sim.terrain;
 
 namespace uk.osric.sim.simulation;
 

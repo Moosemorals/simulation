@@ -8,7 +8,7 @@ using OpenTelemetry.Metrics;
 using uk.osric.sim.server.Simulation;
 using uk.osric.sim.server.Terrain;
 using uk.osric.sim.simulation.Time;
-using uk.osric.sim.terrain.Generation;
+using uk.osric.sim.terrain;
 
 namespace uk.osric.sim.server;
 
@@ -37,7 +37,7 @@ public static class Program {
 			options.EnableForHttps = true;
 			options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/json"]);
 		});
-		
+
 		builder.Services.AddControllers();
 		builder.Services.AddHealthChecks();
 		builder.Services.AddSingleton<ITerrainGenerator, TerrainGenerationOrchestrator>();

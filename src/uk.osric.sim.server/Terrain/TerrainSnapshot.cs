@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: ISC
 
 using System.Diagnostics;
-
-using uk.osric.sim.terrain.Generation;
+using uk.osric.sim.terrain;
 
 namespace uk.osric.sim.server.Terrain;
 

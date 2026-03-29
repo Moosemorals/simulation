@@ -5,7 +5,7 @@ namespace uk.osric.sim.simulation.Ecs;
 
 internal sealed class EntityStorage {
     private interface IComponentStore {
-        void Remove(int entityId);
+        public void Remove(int entityId);
     }
 
     private sealed class ComponentStore<T> : IComponentStore where T : struct {

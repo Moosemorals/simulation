@@ -4,7 +4,7 @@
 namespace uk.osric.sim.terrain.Generation;
 
 internal sealed class BicubicUpscaleLayer {
-    public UpscaledTerrainData Apply(
+    public static UpscaledTerrainData Apply(
         float[] heightData,
         float[] waterAccumulationData,
         bool[] riverMask,

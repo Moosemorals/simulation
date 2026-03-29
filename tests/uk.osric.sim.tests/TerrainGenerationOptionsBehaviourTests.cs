@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: ISC
 
 using NUnit.Framework;
+using uk.osric.sim.terrain;
 
-using uk.osric.sim.terrain.Generation;
 
 namespace uk.osric.sim.tests;
 

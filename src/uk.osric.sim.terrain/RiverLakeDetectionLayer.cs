@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
-namespace uk.osric.sim.terrain.Generation;
+namespace uk.osric.sim.terrain;
 
 internal sealed class RiverLakeDetectionLayer {
     private const float RiverFlowThreshold = 0.12f;
@@ -9,7 +9,7 @@ internal sealed class RiverLakeDetectionLayer {
     private const float LakeFlowThreshold = 0.2f;
     private const float LakeSlopeEpsilon = 0.00075f;
 
-    public (bool[] riverMask, bool[] lakeMask) Build(float[] heightData, float[] waterAccumulationData, int size) {
+    public static (bool[] riverMask, bool[] lakeMask) Build(float[] heightData, float[] waterAccumulationData, int size) {
         int cellCount = size * size;
         bool[] riverMask = new bool[cellCount];
         bool[] lakeMask = new bool[cellCount];

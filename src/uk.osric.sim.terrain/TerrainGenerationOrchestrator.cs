@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
-namespace uk.osric.sim.terrain.Generation;
+using uk.osric.sim.terrain.Generation;
+
+namespace uk.osric.sim.terrain;
 
 public sealed class TerrainGenerationOrchestrator : ITerrainGenerator {
     private readonly DiamondSquareTerrainGenerator diamondSquareLayer;
@@ -24,16 +26,16 @@ public sealed class TerrainGenerationOrchestrator : ITerrainGenerator {
             throw new NotSupportedException($"Unsupported terrain algorithm '{options.BaseAlgorithm}'.");
         }
 
-        float[] heightData = diamondSquareLayer.GenerateHeightData(options);
-        float[] waterAccumulationData = randomRaindropErosionLayer.Apply(
+        float[] heightData = DiamondSquareTerrainGenerator.GenerateHeightData(options);
+        float[] waterAccumulationData = RandomRaindropErosionLayer.Apply(
             heightData,
             options.Size,
             options.ErosionPasses,
             options.Seed,
             options.RaindropErosion);
-        (bool[] riverMask, bool[] lakeMask) = riverLakeDetectionLayer.Build(heightData, waterAccumulationData, options.Size);
+        (bool[] riverMask, bool[] lakeMask) = RiverLakeDetectionLayer.Build(heightData, waterAccumulationData, options.Size);
 
-        UpscaledTerrainData upscaled = bicubicUpscaleLayer.Apply(
+        UpscaledTerrainData upscaled = BicubicUpscaleLayer.Apply(
             heightData,
             waterAccumulationData,
             riverMask,

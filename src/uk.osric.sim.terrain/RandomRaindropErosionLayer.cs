@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Osric Wilkinson <osric@fluffypeople.com>
 // SPDX-License-Identifier: ISC
 
-namespace uk.osric.sim.terrain.Generation;
+namespace uk.osric.sim.terrain;
 
 internal sealed class RandomRaindropErosionLayer {
-    public float[] Apply(float[] heightData, int size, int erosionPasses, int seed, RandomRaindropErosionTuning tuning) {
+    public static float[] Apply(float[] heightData, int size, int erosionPasses, int seed, RandomRaindropErosionTuning tuning) {
         int cellCount = heightData.Length;
         float[] waterAccumulation = new float[cellCount];
         bool includeDiagonalNeighbors = tuning.NeighborSampleCount == 8;

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using uk.osric.sim.contracts.Terrain;
 using uk.osric.sim.server.Terrain;
-using uk.osric.sim.terrain.Generation;
+using uk.osric.sim.terrain;
 
 namespace uk.osric.sim.server.Controllers;
 
