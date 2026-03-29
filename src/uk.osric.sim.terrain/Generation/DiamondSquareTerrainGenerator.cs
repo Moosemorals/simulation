@@ -56,13 +56,7 @@ internal sealed class DiamondSquareTerrainGenerator {
         }
 
         // Force explicit seam continuity for toroidal edge tiles.
-        for (int i = 0; i < size; i++) {
-            float topValue = ToroidalGrid.Get(heightData, i, 0, size);
-            ToroidalGrid.Set(heightData, i, size - 1, size, topValue);
-
-            float leftValue = ToroidalGrid.Get(heightData, 0, i, size);
-            ToroidalGrid.Set(heightData, size - 1, i, size, leftValue);
-        }
+        ToroidalGrid.EnforceToroidalSeams(heightData, size);
 
         Normalize(heightData);
         return heightData;

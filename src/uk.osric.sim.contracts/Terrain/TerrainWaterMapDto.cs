@@ -3,7 +3,7 @@
 
 namespace uk.osric.sim.contracts.Terrain;
 
-public sealed record TerrainHydraulicsMapDto(
+public sealed record TerrainWaterMapDto(
     int Size,
     string WaterAccumulationDataBase64,
     string RiverMaskDataBase64,

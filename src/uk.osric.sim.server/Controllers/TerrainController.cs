@@ -45,9 +45,9 @@ public sealed class TerrainController : ControllerBase {
         return Ok(dto);
     }
 
-    [HttpGet("hydraulics")]
-    public ActionResult<TerrainHydraulicsMapDto> GetHydraulicsMap() {
-        TerrainHydraulicsMapDto dto = new(
+    [HttpGet("watermap")]
+    public ActionResult<TerrainWaterMapDto> GetWaterMap() {
+        TerrainWaterMapDto dto = new(
             terrainSnapshot.Map.Size,
             Convert.ToBase64String(terrainSnapshot.WaterAccumulationBytes),
             Convert.ToBase64String(terrainSnapshot.RiverMaskBytes),
@@ -60,18 +60,16 @@ public sealed class TerrainController : ControllerBase {
     [HttpGet("tuning-defaults")]
     public ActionResult<TerrainTuningDefaultsDto> GetTuningDefaults() {
         TerrainGenerationOptions options = terrainSnapshot.Options;
-        HydraulicErosionTuning tuning = options.HydraulicErosion;
+        RandomRaindropErosionTuning tuning = options.RaindropErosion;
 
         TerrainTuningDefaultsDto dto = new(
             options.Seed,
             options.Size,
             options.UpscaleFactor,
             options.ErosionPasses,
-            tuning.TopologyRefreshInterval,
+            tuning.DropPathLength,
             tuning.NeighborSampleCount,
-            tuning.BaseFlow,
-            tuning.ErosionCapFactor,
-            tuning.SlopeFlowFactor,
+            tuning.ErosionStrength,
             tuning.DepositionRatio);
 
         return Ok(dto);
@@ -86,12 +84,10 @@ public sealed class TerrainController : ControllerBase {
             BaseAlgorithm = baseOptions.BaseAlgorithm,
             ErosionPasses = request.ErosionPasses,
             UpscaleFactor = baseOptions.UpscaleFactor,
-            HydraulicErosion = new HydraulicErosionTuning {
-                TopologyRefreshInterval = request.TopologyRefreshInterval,
+            RaindropErosion = new RandomRaindropErosionTuning {
+                DropPathLength = request.DropPathLength,
                 NeighborSampleCount = request.NeighborSampleCount,
-                BaseFlow = request.BaseFlow,
-                ErosionCapFactor = request.ErosionCapFactor,
-                SlopeFlowFactor = request.SlopeFlowFactor,
+                ErosionStrength = request.ErosionStrength,
                 DepositionRatio = request.DepositionRatio,
             },
         };
@@ -115,12 +111,10 @@ public sealed class TerrainController : ControllerBase {
             generationOptions.UpscaleFactor,
             request.ResizeEnabled,
             generationOptions.ErosionPasses,
-            generationOptions.HydraulicErosion.TopologyRefreshInterval,
-            generationOptions.HydraulicErosion.NeighborSampleCount,
-            generationOptions.HydraulicErosion.BaseFlow,
-            generationOptions.HydraulicErosion.ErosionCapFactor,
-            generationOptions.HydraulicErosion.SlopeFlowFactor,
-            generationOptions.HydraulicErosion.DepositionRatio,
+            generationOptions.RaindropErosion.DropPathLength,
+            generationOptions.RaindropErosion.NeighborSampleCount,
+            generationOptions.RaindropErosion.ErosionStrength,
+            generationOptions.RaindropErosion.DepositionRatio,
             Convert.ToBase64String(heightBytes),
             Convert.ToBase64String(waterBytes),
             Convert.ToBase64String(riverBytes),
@@ -135,11 +129,9 @@ public sealed record TerrainTuningDefaultsDto(
     int Size,
     int UpscaleFactor,
     int ErosionPasses,
-    int TopologyRefreshInterval,
+    int DropPathLength,
     int NeighborSampleCount,
-    float BaseFlow,
-    float ErosionCapFactor,
-    float SlopeFlowFactor,
+    float ErosionStrength,
     float DepositionRatio
 );
 
@@ -152,15 +144,11 @@ public sealed class TerrainTuningRequestDto {
 
     public int ErosionPasses { get; init; }
 
-    public int TopologyRefreshInterval { get; init; }
+    public int DropPathLength { get; init; }
 
     public int NeighborSampleCount { get; init; }
 
-    public float BaseFlow { get; init; }
-
-    public float ErosionCapFactor { get; init; }
-
-    public float SlopeFlowFactor { get; init; }
+    public float ErosionStrength { get; init; }
 
     public float DepositionRatio { get; init; }
 }
@@ -172,11 +160,9 @@ public sealed record TerrainTuningRenderDto(
     int UpscaleFactor,
     bool ResizeEnabled,
     int ErosionPasses,
-    int TopologyRefreshInterval,
+    int DropPathLength,
     int NeighborSampleCount,
-    float BaseFlow,
-    float ErosionCapFactor,
-    float SlopeFlowFactor,
+    float ErosionStrength,
     float DepositionRatio,
     string HeightDataBase64,
     string WaterAccumulationDataBase64,

@@ -18,7 +18,7 @@ public sealed class TerrainGenerationOptions {
 
     public int ErosionPasses { get; init; } = 1;
 
-    public HydraulicErosionTuning HydraulicErosion { get; init; } = HydraulicErosionTuning.Default;
+    public RandomRaindropErosionTuning RaindropErosion { get; init; } = RandomRaindropErosionTuning.Default;
 
     public void Validate() {
         if (Size <= 0) {
@@ -48,7 +48,7 @@ public sealed class TerrainGenerationOptions {
             throw new ArgumentOutOfRangeException(nameof(UpscaleFactor), "UpscaleFactor must be greater than 0.");
         }
 
-        HydraulicErosion.Validate();
+        RaindropErosion.Validate();
     }
 
     private static bool IsPowerOfTwo(int value) {
@@ -56,40 +56,28 @@ public sealed class TerrainGenerationOptions {
     }
 }
 
-public sealed class HydraulicErosionTuning {
-    public static HydraulicErosionTuning Default { get; } = new();
+public sealed class RandomRaindropErosionTuning {
+    public static RandomRaindropErosionTuning Default { get; } = new();
 
-    public int TopologyRefreshInterval { get; init; } = 4;
+    public int DropPathLength { get; init; } = 64;
 
     public int NeighborSampleCount { get; init; } = 4;
 
-    public float BaseFlow { get; init; } = 1.0f;
-
-    public float ErosionCapFactor { get; init; } = 0.15f;
-
-    public float SlopeFlowFactor { get; init; } = 0.35f;
+    public float ErosionStrength { get; init; } = 0.02f;
 
     public float DepositionRatio { get; init; } = 0.25f;
 
     public void Validate() {
-        if (TopologyRefreshInterval <= 0) {
-            throw new ArgumentOutOfRangeException(nameof(TopologyRefreshInterval), "TopologyRefreshInterval must be greater than 0.");
+        if (DropPathLength <= 0) {
+            throw new ArgumentOutOfRangeException(nameof(DropPathLength), "DropPathLength must be greater than 0.");
         }
 
         if (NeighborSampleCount is not 4 and not 8) {
             throw new ArgumentOutOfRangeException(nameof(NeighborSampleCount), "NeighborSampleCount must be 4 or 8.");
         }
 
-        if (BaseFlow <= 0.0f) {
-            throw new ArgumentOutOfRangeException(nameof(BaseFlow), "BaseFlow must be greater than 0.");
-        }
-
-        if (ErosionCapFactor <= 0.0f || ErosionCapFactor > 1.0f) {
-            throw new ArgumentOutOfRangeException(nameof(ErosionCapFactor), "ErosionCapFactor must be in range (0, 1].");
-        }
-
-        if (SlopeFlowFactor <= 0.0f || SlopeFlowFactor > 4.0f) {
-            throw new ArgumentOutOfRangeException(nameof(SlopeFlowFactor), "SlopeFlowFactor must be in range (0, 4].");
+        if (ErosionStrength <= 0.0f || ErosionStrength > 1.0f) {
+            throw new ArgumentOutOfRangeException(nameof(ErosionStrength), "ErosionStrength must be in range (0, 1].");
         }
 
         if (DepositionRatio < 0.0f || DepositionRatio > 1.0f) {

@@ -27,10 +27,10 @@ internal sealed class BicubicUpscaleLayer {
         bool[] upscaledRiverMask = UpscaleMask(riverMask, sourceSize, targetSize, upscaleFactor);
         bool[] upscaledLakeMask = UpscaleMask(lakeMask, sourceSize, targetSize, upscaleFactor);
 
-        EnforceToroidalSeams(upscaledHeightData, targetSize);
-        EnforceToroidalSeams(upscaledWaterAccumulationData, targetSize);
-        EnforceToroidalSeams(upscaledRiverMask, targetSize);
-        EnforceToroidalSeams(upscaledLakeMask, targetSize);
+        ToroidalGrid.EnforceToroidalSeams(upscaledHeightData, targetSize);
+        ToroidalGrid.EnforceToroidalSeams(upscaledWaterAccumulationData, targetSize);
+        ToroidalGrid.EnforceToroidalSeams(upscaledRiverMask, targetSize);
+        ToroidalGrid.EnforceToroidalSeams(upscaledLakeMask, targetSize);
 
         return new UpscaledTerrainData(targetSize, upscaledHeightData, upscaledWaterAccumulationData, upscaledRiverMask, upscaledLakeMask);
     }
@@ -92,19 +92,6 @@ internal sealed class BicubicUpscaleLayer {
         return ((a * t + b) * t + c) * t + d;
     }
 
-    private static void EnforceToroidalSeams(float[] grid, int size) {
-        for (int i = 0; i < size; i++) {
-            grid[((size - 1) * size) + i] = grid[i];
-            grid[(i * size) + (size - 1)] = grid[i * size];
-        }
-    }
-
-    private static void EnforceToroidalSeams(bool[] grid, int size) {
-        for (int i = 0; i < size; i++) {
-            grid[((size - 1) * size) + i] = grid[i];
-            grid[(i * size) + (size - 1)] = grid[i * size];
-        }
-    }
 }
 
 internal readonly record struct UpscaledTerrainData(

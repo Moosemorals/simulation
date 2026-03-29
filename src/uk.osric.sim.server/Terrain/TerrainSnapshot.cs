@@ -48,12 +48,20 @@ public sealed class TerrainSnapshot {
     public byte[] LakeMaskBytes { get; }
 
     private static TerrainGenerationOptions BuildOptions(IConfiguration configuration) {
+        RandomRaindropErosionTuning defaults = RandomRaindropErosionTuning.Default;
+
         return new TerrainGenerationOptions {
             Seed = configuration.GetValue<int?>("Terrain:DefaultSeed") ?? FallbackSeed,
             Size = configuration.GetValue<int?>("Terrain:DefaultSize") ?? FallbackSize,
             BaseAlgorithm = "diamond-square",
             ErosionPasses = configuration.GetValue<int?>("Terrain:ErosionPasses") ?? FallbackErosionPasses,
             UpscaleFactor = configuration.GetValue<int?>("Terrain:UpscaleFactor") ?? FallbackUpscaleFactor,
+            RaindropErosion = new RandomRaindropErosionTuning {
+                DropPathLength = configuration.GetValue<int?>("Terrain:RaindropErosion:DropPathLength") ?? defaults.DropPathLength,
+                NeighborSampleCount = configuration.GetValue<int?>("Terrain:RaindropErosion:NeighborSampleCount") ?? defaults.NeighborSampleCount,
+                ErosionStrength = configuration.GetValue<float?>("Terrain:RaindropErosion:ErosionStrength") ?? defaults.ErosionStrength,
+                DepositionRatio = configuration.GetValue<float?>("Terrain:RaindropErosion:DepositionRatio") ?? defaults.DepositionRatio,
+            },
         };
     }
 }

@@ -2,7 +2,7 @@ const form = document.getElementById("tuning-form");
 const formStatus = document.getElementById("form-status");
 const renderList = document.getElementById("render-list");
 const generateButton = document.getElementById("generate");
-const showHydraulicsToggle = document.getElementById("show-hydraulics");
+const showWaterOverlayToggle = document.getElementById("show-water-overlay");
 const resizeToggle = document.getElementById("enable-resize");
 const sizeControl = document.getElementById("size-control");
 const sizePowerInput = document.getElementById("sizePower");
@@ -33,11 +33,9 @@ function powerFromSize(size) {
 const fieldIds = [
     "seed",
     "erosionPasses",
-    "topologyRefreshInterval",
+    "dropPathLength",
     "neighborSampleCount",
-    "baseFlow",
-    "erosionCapFactor",
-    "slopeFlowFactor",
+    "erosionStrength",
     "depositionRatio",
 ];
 
@@ -85,14 +83,14 @@ function createTerrainTexture(size, heightBytes) {
     return textureCanvas;
 }
 
-function createHydraulicsTexture(size, waterAccumulationBytes, riverMaskBytes, lakeMaskBytes) {
+function createWaterTexture(size, waterAccumulationBytes, riverMaskBytes, lakeMaskBytes) {
     const textureCanvas = document.createElement("canvas");
     textureCanvas.width = size;
     textureCanvas.height = size;
 
     const textureContext = textureCanvas.getContext("2d");
     if (textureContext === null) {
-        throw new Error("Unable to initialize hydraulics texture context.");
+        throw new Error("Unable to initialize water texture context.");
     }
 
     const imageData = textureContext.createImageData(size, size);
@@ -135,9 +133,9 @@ function createHydraulicsTexture(size, waterAccumulationBytes, riverMaskBytes, l
 
 function drawCompositeMap(canvas, size, heightBytes, waterBytes, riverBytes, lakeBytes) {
     const terrainTexture = createTerrainTexture(size, heightBytes);
-    const showHydraulics = showHydraulicsToggle !== null ? showHydraulicsToggle.checked : true;
-    const hydraulicsTexture = showHydraulics
-        ? createHydraulicsTexture(size, waterBytes, riverBytes, lakeBytes)
+    const showWaterOverlay = showWaterOverlayToggle !== null ? showWaterOverlayToggle.checked : true;
+    const waterTexture = showWaterOverlay
+        ? createWaterTexture(size, waterBytes, riverBytes, lakeBytes)
         : null;
 
     const context = canvas.getContext("2d");
@@ -159,8 +157,8 @@ function drawCompositeMap(canvas, size, heightBytes, waterBytes, riverBytes, lak
 
     context.drawImage(terrainTexture, drawX, drawY, drawWidth, drawHeight);
 
-    if (hydraulicsTexture !== null) {
-        context.drawImage(hydraulicsTexture, drawX, drawY, drawWidth, drawHeight);
+    if (waterTexture !== null) {
+        context.drawImage(waterTexture, drawX, drawY, drawWidth, drawHeight);
     }
 }
 
@@ -207,11 +205,9 @@ function buildRequestBody() {
         sourceSize: sizeFromPower(Number(sizePowerInput.value)),
         resizeEnabled: resizeToggle !== null && resizeToggle.checked,
         erosionPasses: Number(fieldElements.erosionPasses.input.value),
-        topologyRefreshInterval: Number(fieldElements.topologyRefreshInterval.input.value),
+        dropPathLength: Number(fieldElements.dropPathLength.input.value),
         neighborSampleCount: Number(fieldElements.neighborSampleCount.input.value),
-        baseFlow: Number(fieldElements.baseFlow.input.value),
-        erosionCapFactor: Number(fieldElements.erosionCapFactor.input.value),
-        slopeFlowFactor: Number(fieldElements.slopeFlowFactor.input.value),
+        erosionStrength: Number(fieldElements.erosionStrength.input.value),
         depositionRatio: Number(fieldElements.depositionRatio.input.value),
     };
 }
@@ -223,12 +219,10 @@ function buildConfigSnippet(payload) {
             DefaultSize: payload.sourceSize,
             UpscaleFactor: payload.upscaleFactor,
             ErosionPasses: payload.erosionPasses,
-            HydraulicErosion: {
-                TopologyRefreshInterval: payload.topologyRefreshInterval,
+            RaindropErosion: {
+                DropPathLength: payload.dropPathLength,
                 NeighborSampleCount: payload.neighborSampleCount,
-                BaseFlow: Number(payload.baseFlow.toFixed(4)),
-                ErosionCapFactor: Number(payload.erosionCapFactor.toFixed(4)),
-                SlopeFlowFactor: Number(payload.slopeFlowFactor.toFixed(4)),
+                ErosionStrength: Number(payload.erosionStrength.toFixed(4)),
                 DepositionRatio: Number(payload.depositionRatio.toFixed(4)),
             },
         },
@@ -276,11 +270,9 @@ function addRenderCard(payload, elapsedMs) {
         upscaleFactor: payload.upscaleFactor,
         resizeEnabled: payload.resizeEnabled,
         erosionPasses: payload.erosionPasses,
-        topologyRefreshInterval: payload.topologyRefreshInterval,
+        dropPathLength: payload.dropPathLength,
         neighborSampleCount: payload.neighborSampleCount,
-        baseFlow: Number(payload.baseFlow.toFixed(3)),
-        erosionCapFactor: Number(payload.erosionCapFactor.toFixed(3)),
-        slopeFlowFactor: Number(payload.slopeFlowFactor.toFixed(3)),
+        erosionStrength: Number(payload.erosionStrength.toFixed(3)),
         depositionRatio: Number(payload.depositionRatio.toFixed(3)),
         elapsedMs: Number(elapsedMs.toFixed(2)),
     }, null, 2);
@@ -338,11 +330,9 @@ async function loadDefaults() {
     fieldElements.seed.input.value = defaults.seed;
     sizePowerInput.value = powerFromSize(defaults.size);
     fieldElements.erosionPasses.input.value = defaults.erosionPasses;
-    fieldElements.topologyRefreshInterval.input.value = defaults.topologyRefreshInterval;
+    fieldElements.dropPathLength.input.value = defaults.dropPathLength;
     fieldElements.neighborSampleCount.input.value = defaults.neighborSampleCount;
-    fieldElements.baseFlow.input.value = defaults.baseFlow;
-    fieldElements.erosionCapFactor.input.value = defaults.erosionCapFactor;
-    fieldElements.slopeFlowFactor.input.value = defaults.slopeFlowFactor;
+    fieldElements.erosionStrength.input.value = defaults.erosionStrength;
     fieldElements.depositionRatio.input.value = defaults.depositionRatio;
     updateOutputValues();
 }
@@ -381,8 +371,8 @@ if (resizeToggle !== null) {
     });
 }
 
-if (showHydraulicsToggle !== null) {
-    showHydraulicsToggle.addEventListener("change", () => {
+if (showWaterOverlayToggle !== null) {
+    showWaterOverlayToggle.addEventListener("change", () => {
         redrawAllCards();
     });
 }

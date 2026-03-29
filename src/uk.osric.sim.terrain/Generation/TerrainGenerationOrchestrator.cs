@@ -5,13 +5,13 @@ namespace uk.osric.sim.terrain.Generation;
 
 public sealed class TerrainGenerationOrchestrator : ITerrainGenerator {
     private readonly DiamondSquareTerrainGenerator diamondSquareLayer;
-    private readonly HydraulicErosionLayer hydraulicErosionLayer;
+    private readonly RandomRaindropErosionLayer randomRaindropErosionLayer;
     private readonly RiverLakeDetectionLayer riverLakeDetectionLayer;
     private readonly BicubicUpscaleLayer bicubicUpscaleLayer;
 
     public TerrainGenerationOrchestrator() {
         diamondSquareLayer = new DiamondSquareTerrainGenerator();
-        hydraulicErosionLayer = new HydraulicErosionLayer();
+        randomRaindropErosionLayer = new RandomRaindropErosionLayer();
         riverLakeDetectionLayer = new RiverLakeDetectionLayer();
         bicubicUpscaleLayer = new BicubicUpscaleLayer();
     }
@@ -25,11 +25,12 @@ public sealed class TerrainGenerationOrchestrator : ITerrainGenerator {
         }
 
         float[] heightData = diamondSquareLayer.GenerateHeightData(options);
-        float[] waterAccumulationData = hydraulicErosionLayer.Apply(
+        float[] waterAccumulationData = randomRaindropErosionLayer.Apply(
             heightData,
             options.Size,
             options.ErosionPasses,
-            options.HydraulicErosion);
+            options.Seed,
+            options.RaindropErosion);
         (bool[] riverMask, bool[] lakeMask) = riverLakeDetectionLayer.Build(heightData, waterAccumulationData, options.Size);
 
         UpscaledTerrainData upscaled = bicubicUpscaleLayer.Apply(

@@ -10,7 +10,7 @@
     <main class="lab-layout">
         <section class="lab-header">
             <p class="kicker">Terrain Lab</p>
-            <h1>Hydraulic tuning playground</h1>
+            <h1>Raindrop erosion playground</h1>
             <p>Slide the numeric parameters, generate a fresh map, and compare results over time. New renders appear first and older runs stay visible.</p>
         </section>
 
@@ -32,13 +32,13 @@
                     <span>Erosion passes</span>
                     <input type="range" id="erosionPasses" min="0" max="4000" step="1">
                     <output id="erosionPasses-value"></output>
-                    <small class="slider-help">How many erosion iterations to run. Higher values carve stronger channels but cost more CPU time.</small>
+                    <small class="slider-help">Total number of raindrops to simulate. Higher values carve stronger channels but cost more CPU time.</small>
                 </label>
                 <label>
-                    <span>Topology refresh interval</span>
-                    <input type="range" id="topologyRefreshInterval" min="1" max="64" step="1">
-                    <output id="topologyRefreshInterval-value"></output>
-                    <small class="slider-help">How often downhill flow paths are recomputed. Lower values are more accurate; higher values are faster.</small>
+                    <span>Drop path length</span>
+                    <input type="range" id="dropPathLength" min="4" max="256" step="1">
+                    <output id="dropPathLength-value"></output>
+                    <small class="slider-help">Maximum downhill steps each raindrop can travel before stopping.</small>
                 </label>
                 <label>
                     <span>Neighbor sample count</span>
@@ -47,22 +47,10 @@
                     <small class="slider-help">4-way uses only cardinal neighbors (cheaper). 8-way includes diagonals for more natural drainage.</small>
                 </label>
                 <label>
-                    <span>Base flow</span>
-                    <input type="range" id="baseFlow" min="0.1" max="3.0" step="0.05">
-                    <output id="baseFlow-value"></output>
-                    <small class="slider-help">Minimum water volume per tile before routing. Higher values widen flow influence and can boost river coverage.</small>
-                </label>
-                <label>
-                    <span>Erosion cap factor</span>
-                    <input type="range" id="erosionCapFactor" min="0.01" max="0.6" step="0.01">
-                    <output id="erosionCapFactor-value"></output>
-                    <small class="slider-help">Upper limit of material removed per step. Important safety valve against overly aggressive terrain collapse.</small>
-                </label>
-                <label>
-                    <span>Slope-flow factor</span>
-                    <input type="range" id="slopeFlowFactor" min="0.05" max="2.5" step="0.01">
-                    <output id="slopeFlowFactor-value"></output>
-                    <small class="slider-help">Main erosion strength multiplier from slope and flow. The strongest artistic control over channel sharpness.</small>
+                    <span>Erosion strength</span>
+                    <input type="range" id="erosionStrength" min="0.001" max="0.100" step="0.001">
+                    <output id="erosionStrength-value"></output>
+                    <small class="slider-help">Maximum amount removed from a tile each step of a raindrop path.</small>
                 </label>
                 <label>
                     <span>Deposition ratio</span>
@@ -75,9 +63,9 @@
                         <input id="enable-resize" type="checkbox">
                         <span>Enable resizing</span>
                     </label>
-                    <label class="toggle-inline" for="show-hydraulics">
-                        <input id="show-hydraulics" type="checkbox" checked>
-                        <span>Show blue hydraulics overlay</span>
+                    <label class="toggle-inline" for="show-water-overlay">
+                        <input id="show-water-overlay" type="checkbox" checked>
+                        <span>Show blue water overlay</span>
                     </label>
                     <button id="generate" type="submit">Generate Render</button>
                     <p id="form-status">Loading defaults...</p>
