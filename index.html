@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>uk.osric.sim</title>
+    <link rel="stylesheet" href="/styles/site.css">
+</head>
+<body>
+    <main class="layout">
+        <section class="hero">
+            <p class="eyebrow">uk.osric.sim</p>
+            <h1>Medieval low-fantasy simulation</h1>
+            <p class="summary">Terrain, simulation, server, and frontend now have separate seams so they can move in parallel without rewriting the baseline.</p>
+            <p class="summary"><a href="/tune/index.html">Open terrain tuning lab</a></p>
+        </section>
+        <section class="status-panel">
+            <div>
+                <h2>Terrain Seed</h2>
+                <pre id="terrain-seed">Loading...</pre>
+            </div>
+            <div>
+                <h2>Terrain Map</h2>
+                <pre id="terrain-map-status">Loading...</pre>
+            </div>
+            <div>
+                <h2>Simulation Stream</h2>
+                <pre id="stream-status">Connecting...</pre>
+            </div>
+        </section>
+        <section class="viewport-panel">
+            <div class="viewport-toolbar">
+                <div class="zoom-controls" aria-label="Zoom controls">
+                    <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+                    <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
+                </div>
+                <div class="pan-controls" aria-label="Pan controls">
+                    <button id="pan-up" class="pan-up" type="button" aria-label="Pan up">▲</button>
+                    <button id="pan-left" class="pan-left" type="button" aria-label="Pan left">◀</button>
+                    <button id="reset-view" class="reset-view" type="button" aria-label="Reset view">⊙</button>
+                    <button id="pan-right" class="pan-right" type="button" aria-label="Pan right">▶</button>
+                    <button id="pan-down" class="pan-down" type="button" aria-label="Pan down">▼</button>
+                </div>
+            </div>
+            <canvas id="sim-canvas" width="960" height="540"></canvas>
+        </section>
+    </main>
+    <script type="module" src="/scripts/main.js"></script>
+</body>
+</html>

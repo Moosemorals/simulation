@@ -12,7 +12,7 @@ public sealed class TerrainGenerationOptionsBehaviourTests {
     public void Defaults_EnableToroidalGenerationAndDiamondSquare() {
         TerrainGenerationOptions options = new() {
             Seed = 1729,
-            Size = 513,
+            Size = 512,
         };
 
         Assert.Multiple(() => {
@@ -29,7 +29,7 @@ public sealed class TerrainGenerationOptionsBehaviourTests {
     public void Options_CanOverrideAlgorithmAndErosionPasses() {
         TerrainGenerationOptions options = new() {
             Seed = 42,
-            Size = 257,
+            Size = 256,
             BaseAlgorithm = "test-noise",
             ErosionPasses = 3,
         };
@@ -52,21 +52,33 @@ public sealed class TerrainGenerationOptionsBehaviourTests {
     }
 
     [Test]
-    public void Validate_RejectsDiamondSquareSizesThatAreNotPowerOfTwoPlusOne() {
+    public void Validate_RejectsSizesThatAreNotPowerOfTwo() {
         TerrainGenerationOptions options = new() {
             Seed = 1729,
             Size = 300,
         };
 
         ArgumentException? exception = Assert.Throws<ArgumentException>(() => options.Validate());
-        Assert.That(exception!.Message, Does.Contain("2^n + 1"));
+        Assert.That(exception!.Message, Does.Contain("power of two"));
+    }
+
+    [Test]
+    public void Validate_RejectsDiamondSquareUpscaleFactorThatIsNotPowerOfTwo() {
+        TerrainGenerationOptions options = new() {
+            Seed = 1729,
+            Size = 256,
+            UpscaleFactor = 3,
+        };
+
+        ArgumentException? exception = Assert.Throws<ArgumentException>(() => options.Validate());
+        Assert.That(exception!.ParamName, Is.EqualTo("UpscaleFactor"));
     }
 
     [Test]
     public void Validate_RejectsRaindropNeighborCountOutsideSupportedValues() {
         TerrainGenerationOptions options = new() {
             Seed = 1729,
-            Size = 257,
+            Size = 256,
             RaindropErosion = new RandomRaindropErosionTuning {
                 NeighborSampleCount = 6,
             },
@@ -80,7 +92,7 @@ public sealed class TerrainGenerationOptionsBehaviourTests {
     public void Validate_AcceptsRaindropTuningWithinRange() {
         TerrainGenerationOptions options = new() {
             Seed = 999,
-            Size = 257,
+            Size = 256,
             ErosionPasses = 16,
             RaindropErosion = new RandomRaindropErosionTuning {
                 DropPathLength = 96,

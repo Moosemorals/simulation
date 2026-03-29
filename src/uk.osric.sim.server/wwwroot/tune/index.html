@@ -23,15 +23,15 @@
                     <small class="slider-help">Changes the random starting pattern. Use this to compare parameter effects across different terrain seeds.</small>
                 </label>
                 <label id="size-control">
-                    <span>Source size ($2^n + 1$)</span>
+                    <span>Source size ($2^n$)</span>
                     <input type="range" id="sizePower" min="5" max="9" step="1">
                     <output id="sizePower-value"></output>
-                    <small class="slider-help">Chooses only valid diamond-square dimensions: 33, 65, 129, 257, or 513. Larger values increase detail and generation cost.</small>
+                    <small class="slider-help">Chooses power-of-two dimensions: 32, 64, 128, 256, or 512. Larger values increase detail and generation cost.</small>
                 </label>
                 <label>
-                    <span>Erosion passes</span>
-                    <input type="range" id="erosionPasses" min="0" max="4000" step="1">
-                    <output id="erosionPasses-value"></output>
+                    <span>Raindrops</span>
+                    <input type="range" id="raindrops" min="0" max="100000" step="1000">
+                    <output id="raindrops-value"></output>
                     <small class="slider-help">Total number of raindrops to simulate. Higher values carve stronger channels but cost more CPU time.</small>
                 </label>
                 <label>

@@ -4,59 +4,55 @@
 namespace uk.osric.sim.terrain;
 
 internal sealed class DiamondSquareTerrainGenerator {
-    public static float[] GenerateHeightData(TerrainGenerationOptions options) {
+    public static Torus<float> GenerateHeightData(TerrainGenerationOptions options) {
         ArgumentNullException.ThrowIfNull(options);
 
         return GenerateHeightField(options.Size, options.Seed, options.InitialDisplacement, options.Roughness);
     }
 
-    private static float[] GenerateHeightField(int size, int seed, float initialDisplacement, float roughness) {
-        float[] heightData = new float[size * size];
+    private static Torus<float> GenerateHeightField(int size, int seed, float initialDisplacement, float roughness) {
+        Torus<float> heightData = new(size);
         Random rng = new(seed);
 
-        float cornerValue = NextDisplacement(rng, initialDisplacement);
-        ToroidalGrid.Set(heightData, 0, 0, size, cornerValue);
-        ToroidalGrid.Set(heightData, size - 1, 0, size, cornerValue);
-        ToroidalGrid.Set(heightData, 0, size - 1, size, cornerValue);
-        ToroidalGrid.Set(heightData, size - 1, size - 1, size, cornerValue);
+        heightData[0, 0] = NextDisplacement(rng, initialDisplacement);
 
-        int step = size - 1;
+        int step = size;
         float displacement = initialDisplacement;
 
         while (step > 1) {
             int halfStep = step / 2;
 
-            for (int y = halfStep; y < size; y += step) {
-                for (int x = halfStep; x < size; x += step) {
-                    float a = ToroidalGrid.Get(heightData, x - halfStep, y - halfStep, size);
-                    float b = ToroidalGrid.Get(heightData, x + halfStep, y - halfStep, size);
-                    float c = ToroidalGrid.Get(heightData, x - halfStep, y + halfStep, size);
-                    float d = ToroidalGrid.Get(heightData, x + halfStep, y + halfStep, size);
+            for (int y = 0; y < size; y += step) {
+                for (int x = 0; x < size; x += step) {
+                    int centerX = x + halfStep;
+                    int centerY = y + halfStep;
+
+                    float a = heightData[x, y];
+                    float b = heightData[x + step, y];
+                    float c = heightData[x, y + step];
+                    float d = heightData[x + step, y + step];
                     float average = (a + b + c + d) * 0.25f;
                     float value = average + NextDisplacement(rng, displacement);
-                    ToroidalGrid.Set(heightData, x, y, size, value);
+                    heightData[centerX, centerY] = value;
                 }
             }
 
             for (int y = 0; y < size; y += halfStep) {
-                int startX = ((y / halfStep) % 2 == 0) ? halfStep : 0;
+                int startX = ((y / halfStep) % 2 == 0) ? 0 : halfStep;
                 for (int x = startX; x < size; x += step) {
-                    float left = ToroidalGrid.Get(heightData, x - halfStep, y, size);
-                    float right = ToroidalGrid.Get(heightData, x + halfStep, y, size);
-                    float up = ToroidalGrid.Get(heightData, x, y - halfStep, size);
-                    float down = ToroidalGrid.Get(heightData, x, y + halfStep, size);
+                    float left = heightData[x - halfStep, y];
+                    float right = heightData[x + halfStep, y];
+                    float up = heightData[x, y - halfStep];
+                    float down = heightData[x, y + halfStep];
                     float average = (left + right + up + down) * 0.25f;
                     float value = average + NextDisplacement(rng, displacement);
-                    ToroidalGrid.Set(heightData, x, y, size, value);
+                    heightData[x, y] = value;
                 }
             }
 
             step /= 2;
             displacement *= roughness;
         }
-
-        // Force explicit seam continuity for toroidal edge tiles.
-        ToroidalGrid.EnforceToroidalSeams(heightData, size);
 
         Normalize(heightData);
         return heightData;
@@ -66,32 +62,39 @@ internal sealed class DiamondSquareTerrainGenerator {
         return ((float)rng.NextDouble() * 2.0f - 1.0f) * amplitude;
     }
 
-    private static void Normalize(float[] heightData) {
+    private static void Normalize(Torus<float> heightData) {
         float min = float.MaxValue;
         float max = float.MinValue;
+        int size = heightData.Size;
 
-        for (int i = 0; i < heightData.Length; i++) {
-            float value = heightData[i];
-            if (value < min) {
-                min = value;
-            }
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                float value = heightData[x, y];
+                if (value < min) {
+                    min = value;
+                }
 
-            if (value > max) {
-                max = value;
+                if (value > max) {
+                    max = value;
+                }
             }
         }
 
         float range = max - min;
         if (range <= 0.0f) {
-            for (int i = 0; i < heightData.Length; i++) {
-                heightData[i] = 0.5f;
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    heightData[x, y] = 0.5f;
+                }
             }
 
             return;
         }
 
-        for (int i = 0; i < heightData.Length; i++) {
-            heightData[i] = (heightData[i] - min) / range;
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                heightData[x, y] = (heightData[x, y] - min) / range;
+            }
         }
     }
 }

@@ -9,36 +9,30 @@ internal sealed class RiverLakeDetectionLayer {
     private const float LakeFlowThreshold = 0.2f;
     private const float LakeSlopeEpsilon = 0.00075f;
 
-    public static (bool[] riverMask, bool[] lakeMask) Build(float[] heightData, float[] waterAccumulationData, int size) {
-        int cellCount = size * size;
-        bool[] riverMask = new bool[cellCount];
-        bool[] lakeMask = new bool[cellCount];
+    public static (Torus<bool> riverMask, Torus<bool> lakeMask) Build(Torus<float> heightData, Torus<float> waterAccumulationData, int size) {
+        Torus<bool> riverMask = new(size);
+        Torus<bool> lakeMask = new(size);
 
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
-                int index = y * size + x;
-                float flow = waterAccumulationData[index];
+                float flow = waterAccumulationData[x, y];
 
-                int downhillIndex = FindSteepestDownhillIndex(heightData, size, x, y, out float downhillDrop);
-                bool hasDownhill = downhillIndex >= 0;
+                bool hasDownhill = TryFindSteepestDownhill(heightData, x, y, out float downhillDrop);
 
                 bool isRiver = flow >= RiverFlowThreshold && hasDownhill && downhillDrop >= RiverSlopeThreshold;
-                riverMask[index] = isRiver;
+                riverMask[x, y] = isRiver;
 
                 bool isLake = !isRiver && flow >= LakeFlowThreshold && (!hasDownhill || downhillDrop <= LakeSlopeEpsilon);
-                lakeMask[index] = isLake;
+                lakeMask[x, y] = isLake;
             }
         }
-
-        EnforceToroidalSeams(riverMask, size);
-        EnforceToroidalSeams(lakeMask, size);
 
         return (riverMask, lakeMask);
     }
 
-    private static int FindSteepestDownhillIndex(float[] heightData, int size, int x, int y, out float bestDrop) {
-        int bestIndex = -1;
-        float currentHeight = heightData[y * size + x];
+    private static bool TryFindSteepestDownhill(Torus<float> heightData, int x, int y, out float bestDrop) {
+        bool found = false;
+        float currentHeight = heightData[x, y];
         bestDrop = 0.0f;
 
         for (int offsetY = -1; offsetY <= 1; offsetY++) {
@@ -47,28 +41,15 @@ internal sealed class RiverLakeDetectionLayer {
                     continue;
                 }
 
-                int neighborX = ToroidalGrid.Wrap(x + offsetX, size);
-                int neighborY = ToroidalGrid.Wrap(y + offsetY, size);
-                int neighborIndex = neighborY * size + neighborX;
-                float drop = currentHeight - heightData[neighborIndex];
+                float drop = currentHeight - heightData[x + offsetX, y + offsetY];
 
                 if (drop > bestDrop) {
                     bestDrop = drop;
-                    bestIndex = neighborIndex;
+                    found = true;
                 }
             }
         }
 
-        return bestIndex;
-    }
-
-    private static void EnforceToroidalSeams(bool[] grid, int size) {
-        for (int i = 0; i < size; i++) {
-            bool topValue = grid[i];
-            grid[(size - 1) * size + i] = topValue;
-
-            bool leftValue = grid[i * size];
-            grid[i * size + (size - 1)] = leftValue;
-        }
+        return found;
     }
 }

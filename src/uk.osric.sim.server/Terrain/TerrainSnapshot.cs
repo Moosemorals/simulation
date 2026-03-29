@@ -8,7 +8,7 @@ namespace uk.osric.sim.server.Terrain;
 
 public sealed class TerrainSnapshot {
     private const int FallbackSeed = 1729;
-    private const int FallbackSize = 513;
+    private const int FallbackSize = 64;
     private const int FallbackErosionPasses = 1;
     private const int FallbackUpscaleFactor = 1;
 

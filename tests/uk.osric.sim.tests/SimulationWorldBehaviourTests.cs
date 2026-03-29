@@ -11,7 +11,7 @@ namespace uk.osric.sim.tests;
 public sealed class SimulationWorldBehaviourTests {
     [Test]
     public void GetSheepLocations_OnStartup_ReturnsAllSpawnedSheep() {
-        SimulationWorld world = CreateWorld(513, 1729);
+        SimulationWorld world = CreateWorld(512, 1729);
 
         var locations = world.GetSheepLocations();
 
@@ -24,7 +24,7 @@ public sealed class SimulationWorldBehaviourTests {
 
     [Test]
     public void Tick_AfterUpdate_SheepLocationsChange() {
-        SimulationWorld world = CreateWorld(513, 1729);
+        SimulationWorld world = CreateWorld(512, 1729);
         var before = world.GetSheepLocations().ToDictionary(location => location.Id.Value, location => location.Location);
 
         world.Tick(1.0f);
@@ -40,7 +40,10 @@ public sealed class SimulationWorldBehaviourTests {
     private static SimulationWorld CreateWorld(int size, int seed) {
         TerrainMap map = new() {
             Size = size,
-            HeightData = new float[size * size],
+            HeightData = new Torus<float>(size),
+            WaterAccumulationData = new Torus<float>(size),
+            RiverMask = new Torus<bool>(size),
+            LakeMask = new Torus<bool>(size),
         };
 
         TerrainGenerationOptions options = new() {

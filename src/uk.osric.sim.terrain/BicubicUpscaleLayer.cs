@@ -5,10 +5,10 @@ namespace uk.osric.sim.terrain.Generation;
 
 internal sealed class BicubicUpscaleLayer {
     public static UpscaledTerrainData Apply(
-        float[] heightData,
-        float[] waterAccumulationData,
-        bool[] riverMask,
-        bool[] lakeMask,
+        Torus<float> heightData,
+        Torus<float> waterAccumulationData,
+        Torus<bool> riverMask,
+        Torus<bool> lakeMask,
         int sourceSize,
         int upscaleFactor) {
         ArgumentNullException.ThrowIfNull(heightData);
@@ -20,23 +20,18 @@ internal sealed class BicubicUpscaleLayer {
             return new UpscaledTerrainData(sourceSize, heightData, waterAccumulationData, riverMask, lakeMask);
         }
 
-        int targetSize = ((sourceSize - 1) * upscaleFactor) + 1;
+        int targetSize = sourceSize * upscaleFactor;
 
-        float[] upscaledHeightData = UpscaleFloatGrid(heightData, sourceSize, targetSize, upscaleFactor);
-        float[] upscaledWaterAccumulationData = UpscaleFloatGrid(waterAccumulationData, sourceSize, targetSize, upscaleFactor);
-        bool[] upscaledRiverMask = UpscaleMask(riverMask, sourceSize, targetSize, upscaleFactor);
-        bool[] upscaledLakeMask = UpscaleMask(lakeMask, sourceSize, targetSize, upscaleFactor);
-
-        ToroidalGrid.EnforceToroidalSeams(upscaledHeightData, targetSize);
-        ToroidalGrid.EnforceToroidalSeams(upscaledWaterAccumulationData, targetSize);
-        ToroidalGrid.EnforceToroidalSeams(upscaledRiverMask, targetSize);
-        ToroidalGrid.EnforceToroidalSeams(upscaledLakeMask, targetSize);
+        Torus<float> upscaledHeightData = UpscaleFloatGrid(heightData, sourceSize, targetSize, upscaleFactor);
+        Torus<float> upscaledWaterAccumulationData = UpscaleFloatGrid(waterAccumulationData, sourceSize, targetSize, upscaleFactor);
+        Torus<bool> upscaledRiverMask = UpscaleMask(riverMask, sourceSize, targetSize, upscaleFactor);
+        Torus<bool> upscaledLakeMask = UpscaleMask(lakeMask, sourceSize, targetSize, upscaleFactor);
 
         return new UpscaledTerrainData(targetSize, upscaledHeightData, upscaledWaterAccumulationData, upscaledRiverMask, upscaledLakeMask);
     }
 
-    private static float[] UpscaleFloatGrid(float[] source, int sourceSize, int targetSize, int upscaleFactor) {
-        float[] target = new float[targetSize * targetSize];
+    private static Torus<float> UpscaleFloatGrid(Torus<float> source, int sourceSize, int targetSize, int upscaleFactor) {
+        Torus<float> target = new(targetSize);
 
         for (int y = 0; y < targetSize; y++) {
             float sourceY = (float)y / upscaleFactor;
@@ -52,14 +47,14 @@ internal sealed class BicubicUpscaleLayer {
                 for (int rowOffset = -1; rowOffset <= 2; rowOffset++) {
                     int sampleY = sourceYFloor + rowOffset;
                     rowSamples[rowOffset + 1] = CubicInterpolate(
-                        ToroidalGrid.Get(source, sourceXFloor - 1, sampleY, sourceSize),
-                        ToroidalGrid.Get(source, sourceXFloor, sampleY, sourceSize),
-                        ToroidalGrid.Get(source, sourceXFloor + 1, sampleY, sourceSize),
-                        ToroidalGrid.Get(source, sourceXFloor + 2, sampleY, sourceSize),
+                        source[sourceXFloor - 1, sampleY],
+                        source[sourceXFloor, sampleY],
+                        source[sourceXFloor + 1, sampleY],
+                        source[sourceXFloor + 2, sampleY],
                         xFraction);
                 }
 
-                target[(y * targetSize) + x] = Math.Clamp(
+                target[x, y] = Math.Clamp(
                     CubicInterpolate(rowSamples[0], rowSamples[1], rowSamples[2], rowSamples[3], yFraction),
                     0.0f,
                     1.0f);
@@ -69,15 +64,15 @@ internal sealed class BicubicUpscaleLayer {
         return target;
     }
 
-    private static bool[] UpscaleMask(bool[] source, int sourceSize, int targetSize, int upscaleFactor) {
-        bool[] target = new bool[targetSize * targetSize];
+    private static Torus<bool> UpscaleMask(Torus<bool> source, int sourceSize, int targetSize, int upscaleFactor) {
+        Torus<bool> target = new(targetSize);
 
         for (int y = 0; y < targetSize; y++) {
             int sourceY = Math.Min(y / upscaleFactor, sourceSize - 1);
 
             for (int x = 0; x < targetSize; x++) {
                 int sourceX = Math.Min(x / upscaleFactor, sourceSize - 1);
-                target[(y * targetSize) + x] = source[(sourceY * sourceSize) + sourceX];
+                target[x, y] = source[sourceX, sourceY];
             }
         }
 
@@ -96,8 +91,8 @@ internal sealed class BicubicUpscaleLayer {
 
 internal readonly record struct UpscaledTerrainData(
     int Size,
-    float[] HeightData,
-    float[] WaterAccumulationData,
-    bool[] RiverMask,
-    bool[] LakeMask
+    Torus<float> HeightData,
+    Torus<float> WaterAccumulationData,
+    Torus<bool> RiverMask,
+    Torus<bool> LakeMask
 );

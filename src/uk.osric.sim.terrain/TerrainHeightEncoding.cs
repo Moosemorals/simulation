@@ -8,14 +8,16 @@ public static class TerrainHeightEncoding {
         ArgumentNullException.ThrowIfNull(terrainMap);
 
         int expectedCellCount = terrainMap.Size * terrainMap.Size;
-        if (terrainMap.HeightData.Length != expectedCellCount) {
+        if (terrainMap.HeightData.Size != terrainMap.Size) {
             throw new ArgumentException("HeightData length must be equal to Size * Size.", nameof(terrainMap));
         }
 
-        byte[] bytes = new byte[terrainMap.HeightData.Length];
-        for (int i = 0; i < terrainMap.HeightData.Length; i++) {
-            float clampedHeight = Math.Clamp(terrainMap.HeightData[i], 0.0f, 1.0f);
-            bytes[i] = (byte)Math.Clamp((int)MathF.Round(clampedHeight * 255.0f), 0, 255);
+        byte[] bytes = new byte[expectedCellCount];
+        for (int y = 0; y < terrainMap.Size; y++) {
+            for (int x = 0; x < terrainMap.Size; x++) {
+                float clampedHeight = Math.Clamp(terrainMap.HeightData[x, y], 0.0f, 1.0f);
+                bytes[(y * terrainMap.Size) + x] = (byte)Math.Clamp((int)MathF.Round(clampedHeight * 255.0f), 0, 255);
+            }
         }
 
         return bytes;

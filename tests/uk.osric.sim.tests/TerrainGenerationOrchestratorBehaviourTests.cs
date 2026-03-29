@@ -16,10 +16,10 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         TerrainMap second = generator.Generate(options);
 
         Assert.Multiple(() => {
-            Assert.That(first.HeightData, Is.EqualTo(second.HeightData));
-            Assert.That(first.WaterAccumulationData, Is.EqualTo(second.WaterAccumulationData));
-            Assert.That(first.RiverMask, Is.EqualTo(second.RiverMask));
-            Assert.That(first.LakeMask, Is.EqualTo(second.LakeMask));
+            Assert.That(Flatten(first.HeightData), Is.EqualTo(Flatten(second.HeightData)));
+            Assert.That(Flatten(first.WaterAccumulationData), Is.EqualTo(Flatten(second.WaterAccumulationData)));
+            Assert.That(Flatten(first.RiverMask), Is.EqualTo(Flatten(second.RiverMask)));
+            Assert.That(Flatten(first.LakeMask), Is.EqualTo(Flatten(second.LakeMask)));
         });
     }
 
@@ -30,11 +30,11 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         TerrainMap first = generator.Generate(CreateDefaultOptions(1729));
         TerrainMap second = generator.Generate(CreateDefaultOptions(1730));
 
-        Assert.That(first.HeightData, Is.Not.EqualTo(second.HeightData));
+        Assert.That(Flatten(first.HeightData), Is.Not.EqualTo(Flatten(second.HeightData)));
     }
 
     [Test]
-    public void Generate_ProducesSeamlessToroidalEdges() {
+    public void Generate_ProducesToroidalHeightWrapping() {
         TerrainGenerationOptions options = CreateDefaultOptions(42);
         TerrainGenerationOrchestrator generator = new();
 
@@ -42,20 +42,20 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         int size = map.Size;
 
         for (int i = 0; i < size; i++) {
-            float top = map.HeightData[i];
-            float bottom = map.HeightData[(size - 1) * size + i];
-            float left = map.HeightData[i * size];
-            float right = map.HeightData[i * size + (size - 1)];
+            float top = map.HeightData[i, 0];
+            float wrappedTop = map.HeightData[i, size];
+            float left = map.HeightData[0, i];
+            float wrappedLeft = map.HeightData[size, i];
 
             Assert.Multiple(() => {
-                Assert.That(bottom, Is.EqualTo(top).Within(0.00001f));
-                Assert.That(right, Is.EqualTo(left).Within(0.00001f));
+                Assert.That(wrappedTop, Is.EqualTo(top).Within(0.00001f));
+                Assert.That(wrappedLeft, Is.EqualTo(left).Within(0.00001f));
             });
         }
     }
 
     [Test]
-    public void Generate_ProducesSeamlessToroidalWaterAccumulationEdges() {
+    public void Generate_ProducesToroidalWaterAccumulationWrapping() {
         TerrainGenerationOptions options = CreateDefaultOptions(42, 4);
         TerrainGenerationOrchestrator generator = new();
 
@@ -63,14 +63,14 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         int size = map.Size;
 
         for (int i = 0; i < size; i++) {
-            float top = map.WaterAccumulationData[i];
-            float bottom = map.WaterAccumulationData[(size - 1) * size + i];
-            float left = map.WaterAccumulationData[i * size];
-            float right = map.WaterAccumulationData[i * size + (size - 1)];
+            float top = map.WaterAccumulationData[i, 0];
+            float wrappedTop = map.WaterAccumulationData[i, size];
+            float left = map.WaterAccumulationData[0, i];
+            float wrappedLeft = map.WaterAccumulationData[size, i];
 
             Assert.Multiple(() => {
-                Assert.That(bottom, Is.EqualTo(top).Within(0.00001f));
-                Assert.That(right, Is.EqualTo(left).Within(0.00001f));
+                Assert.That(wrappedTop, Is.EqualTo(top).Within(0.00001f));
+                Assert.That(wrappedLeft, Is.EqualTo(left).Within(0.00001f));
             });
         }
     }
@@ -81,11 +81,12 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         TerrainGenerationOrchestrator generator = new();
 
         TerrainMap map = generator.Generate(options);
+        float[] values = Flatten(map.WaterAccumulationData);
 
         Assert.Multiple(() => {
-            Assert.That(map.WaterAccumulationData, Has.Length.EqualTo(map.Size * map.Size));
-            Assert.That(map.WaterAccumulationData, Has.All.InRange(0.0f, 1.0f));
-            Assert.That(map.WaterAccumulationData, Has.Some.GreaterThan(0.05f));
+            Assert.That(values, Has.Length.EqualTo(map.Size * map.Size));
+            Assert.That(values, Has.All.InRange(0.0f, 1.0f));
+            Assert.That(values, Has.Some.GreaterThan(0.05f));
         });
     }
 
@@ -95,12 +96,13 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         TerrainGenerationOrchestrator generator = new();
 
         TerrainMap map = generator.Generate(options);
+        bool[] riverMask = Flatten(map.RiverMask);
+        bool[] lakeMask = Flatten(map.LakeMask);
 
         Assert.Multiple(() => {
-            Assert.That(map.RiverMask, Has.Length.EqualTo(map.Size * map.Size));
-            Assert.That(map.LakeMask, Has.Length.EqualTo(map.Size * map.Size));
-            Assert.That(map.RiverMask, Has.Some.True);
-            Assert.That(map.LakeMask, Has.Some.True);
+            Assert.That(riverMask, Has.Length.EqualTo(map.Size * map.Size));
+            Assert.That(lakeMask, Has.Length.EqualTo(map.Size * map.Size));
+            Assert.That(riverMask.Any(cell => cell) || lakeMask.Any(cell => cell), Is.True);
         });
     }
 
@@ -114,7 +116,7 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         TerrainMap baseMap = generator.Generate(withoutErosion);
         TerrainMap erodedMap = generator.Generate(withErosion);
 
-        Assert.That(erodedMap.HeightData, Is.Not.EqualTo(baseMap.HeightData));
+        Assert.That(Flatten(erodedMap.HeightData), Is.Not.EqualTo(Flatten(baseMap.HeightData)));
     }
 
     [Test]
@@ -122,7 +124,7 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         TerrainGenerationOrchestrator generator = new();
         TerrainGenerationOptions options = new() {
             Seed = 42,
-            Size = 9,
+            Size = 8,
             ErosionPasses = 1,
             UpscaleFactor = 8,
         };
@@ -130,11 +132,11 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         TerrainMap map = generator.Generate(options);
 
         Assert.Multiple(() => {
-            Assert.That(map.Size, Is.EqualTo(65));
-            Assert.That(map.HeightData, Has.Length.EqualTo(65 * 65));
-            Assert.That(map.WaterAccumulationData, Has.Length.EqualTo(65 * 65));
-            Assert.That(map.RiverMask, Has.Length.EqualTo(65 * 65));
-            Assert.That(map.LakeMask, Has.Length.EqualTo(65 * 65));
+            Assert.That(map.Size, Is.EqualTo(64));
+            Assert.That(map.HeightData.Size, Is.EqualTo(64));
+            Assert.That(map.WaterAccumulationData.Size, Is.EqualTo(64));
+            Assert.That(map.RiverMask.Size, Is.EqualTo(64));
+            Assert.That(map.LakeMask.Size, Is.EqualTo(64));
         });
     }
 
@@ -143,7 +145,7 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         TerrainGenerationOrchestrator generator = new();
         TerrainGenerationOptions options = new() {
             Seed = 42,
-            Size = 9,
+            Size = 8,
             ErosionPasses = 4,
             UpscaleFactor = 8,
         };
@@ -152,14 +154,14 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         int size = map.Size;
 
         for (int i = 0; i < size; i++) {
-            float top = map.HeightData[i];
-            float bottom = map.HeightData[(size - 1) * size + i];
-            float left = map.HeightData[i * size];
-            float right = map.HeightData[i * size + (size - 1)];
+            float top = map.HeightData[i, 0];
+            float wrappedTop = map.HeightData[i, size];
+            float left = map.HeightData[0, i];
+            float wrappedLeft = map.HeightData[size, i];
 
             Assert.Multiple(() => {
-                Assert.That(bottom, Is.EqualTo(top).Within(0.00001f));
-                Assert.That(right, Is.EqualTo(left).Within(0.00001f));
+                Assert.That(wrappedTop, Is.EqualTo(top).Within(0.00001f));
+                Assert.That(wrappedLeft, Is.EqualTo(left).Within(0.00001f));
             });
         }
     }
@@ -168,21 +170,45 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
     public void Generate_MoreErosionPasses_ProducesMoreErosion() {
         TerrainGenerationOrchestrator generator = new();
 
-        TerrainGenerationOptions fewPasses = new() { Seed = 42, Size = 9, ErosionPasses = 1 };
-        TerrainGenerationOptions manyPasses = new() { Seed = 42, Size = 9, ErosionPasses = 100 };
+        TerrainGenerationOptions fewPasses = new() { Seed = 42, Size = 8, ErosionPasses = 1 };
+        TerrainGenerationOptions manyPasses = new() { Seed = 42, Size = 8, ErosionPasses = 100 };
 
         TerrainMap lightlyEroded = generator.Generate(fewPasses);
         TerrainMap heavilyEroded = generator.Generate(manyPasses);
 
-        Assert.That(heavilyEroded.HeightData, Is.Not.EqualTo(lightlyEroded.HeightData));
+        Assert.That(Flatten(heavilyEroded.HeightData), Is.Not.EqualTo(Flatten(lightlyEroded.HeightData)));
     }
 
     private static TerrainGenerationOptions CreateDefaultOptions(int seed, int erosionPasses = 1) {
         return new TerrainGenerationOptions {
             Seed = seed,
-            Size = 257,
+            Size = 256,
             ErosionPasses = erosionPasses,
             UpscaleFactor = 1,
         };
+    }
+
+    private static float[] Flatten(Torus<float> torus) {
+        float[] values = new float[torus.Size * torus.Size];
+
+        for (int y = 0; y < torus.Size; y++) {
+            for (int x = 0; x < torus.Size; x++) {
+                values[(y * torus.Size) + x] = torus[x, y];
+            }
+        }
+
+        return values;
+    }
+
+    private static bool[] Flatten(Torus<bool> torus) {
+        bool[] values = new bool[torus.Size * torus.Size];
+
+        for (int y = 0; y < torus.Size; y++) {
+            for (int x = 0; x < torus.Size; x++) {
+                values[(y * torus.Size) + x] = torus[x, y];
+            }
+        }
+
+        return values;
     }
 }

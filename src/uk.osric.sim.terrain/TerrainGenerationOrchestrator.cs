@@ -26,14 +26,14 @@ public sealed class TerrainGenerationOrchestrator : ITerrainGenerator {
             throw new NotSupportedException($"Unsupported terrain algorithm '{options.BaseAlgorithm}'.");
         }
 
-        float[] heightData = DiamondSquareTerrainGenerator.GenerateHeightData(options);
-        float[] waterAccumulationData = RandomRaindropErosionLayer.Apply(
+        Torus<float> heightData = DiamondSquareTerrainGenerator.GenerateHeightData(options);
+        Torus<float> waterAccumulationData = RandomRaindropErosionLayer.Apply(
             heightData,
             options.Size,
             options.ErosionPasses,
             options.Seed,
             options.RaindropErosion);
-        (bool[] riverMask, bool[] lakeMask) = RiverLakeDetectionLayer.Build(heightData, waterAccumulationData, options.Size);
+        (Torus<bool> riverMask, Torus<bool> lakeMask) = RiverLakeDetectionLayer.Build(heightData, waterAccumulationData, options.Size);
 
         UpscaledTerrainData upscaled = BicubicUpscaleLayer.Apply(
             heightData,

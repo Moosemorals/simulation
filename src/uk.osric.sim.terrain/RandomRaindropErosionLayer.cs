@@ -4,9 +4,8 @@
 namespace uk.osric.sim.terrain;
 
 internal sealed class RandomRaindropErosionLayer {
-    public static float[] Apply(float[] heightData, int size, int erosionPasses, int seed, RandomRaindropErosionTuning tuning) {
-        int cellCount = heightData.Length;
-        float[] waterAccumulation = new float[cellCount];
+    public static Torus<float> Apply(Torus<float> heightData, int size, int erosionPasses, int seed, RandomRaindropErosionTuning tuning) {
+        Torus<float> waterAccumulation = new(size);
         bool includeDiagonalNeighbors = tuning.NeighborSampleCount == 8;
         Random random = new(seed);
 
@@ -16,123 +15,126 @@ internal sealed class RandomRaindropErosionLayer {
             float carriedSediment = 0.0f;
 
             for (int step = 0; step < tuning.DropPathLength; step++) {
-                int currentIndex = ToroidalGrid.Index(x, y, size);
-                waterAccumulation[currentIndex] += 1.0f;
+                waterAccumulation[x, y] += 1.0f;
 
-                int nextIndex = FindDownhillNeighbor(heightData, size, x, y, includeDiagonalNeighbors);
-                if (nextIndex < 0) {
+                bool hasNeighbor = TryFindDownhillNeighbor(heightData, x, y, includeDiagonalNeighbors, out int nextX, out int nextY);
+                if (!hasNeighbor) {
                     if (carriedSediment > 0.0f) {
-                        heightData[currentIndex] += carriedSediment;
+                        heightData[x, y] += carriedSediment;
                     }
                     break;
                 }
 
-                float erosion = MathF.Min(heightData[currentIndex], tuning.ErosionStrength);
+                float erosion = MathF.Min(heightData[x, y], tuning.ErosionStrength);
                 if (erosion > 0.0f) {
-                    heightData[currentIndex] -= erosion;
+                    heightData[x, y] -= erosion;
                     carriedSediment += erosion;
                 }
 
                 float deposited = carriedSediment * tuning.DepositionRatio;
                 if (deposited > 0.0f) {
-                    heightData[nextIndex] += deposited;
+                    heightData[nextX, nextY] += deposited;
                     carriedSediment -= deposited;
                 }
 
-                y = nextIndex / size;
-                x = nextIndex % size;
+                x = nextX;
+                y = nextY;
             }
 
             if (carriedSediment > 0.0f) {
-                int finalIndex = ToroidalGrid.Index(x, y, size);
-                heightData[finalIndex] += carriedSediment;
+                heightData[x, y] += carriedSediment;
             }
 
-            for (int i = 0; i < cellCount; i++) {
-                if (heightData[i] < 0.0f) {
-                    heightData[i] = 0.0f;
+            for (int row = 0; row < size; row++) {
+                for (int col = 0; col < size; col++) {
+                    if (heightData[col, row] < 0.0f) {
+                        heightData[col, row] = 0.0f;
+                    }
                 }
             }
-
-            ToroidalGrid.EnforceToroidalSeams(heightData, size);
         }
 
         Normalize(heightData);
         NormalizeToMax(waterAccumulation);
-        ToroidalGrid.EnforceToroidalSeams(heightData, size);
-        ToroidalGrid.EnforceToroidalSeams(waterAccumulation, size);
 
         return waterAccumulation;
     }
 
-    private static int FindDownhillNeighbor(float[] heightData, int size, int x, int y, bool includeDiagonalNeighbors) {
-        int left = ToroidalGrid.Wrap(x - 1, size);
-        int right = ToroidalGrid.Wrap(x + 1, size);
-        int up = ToroidalGrid.Wrap(y - 1, size);
-        int down = ToroidalGrid.Wrap(y + 1, size);
-
-        int currentIndex = ToroidalGrid.Index(x, y, size);
-        float currentHeight = heightData[currentIndex];
-        int bestIndex = -1;
+    private static bool TryFindDownhillNeighbor(Torus<float> heightData, int x, int y, bool includeDiagonalNeighbors, out int bestX, out int bestY) {
+        float currentHeight = heightData[x, y];
         float bestDrop = 0.0f;
+        bestX = x;
+        bestY = y;
 
-        ConsiderNeighbor(heightData, (up * size) + x, currentHeight, ref bestDrop, ref bestIndex);
-        ConsiderNeighbor(heightData, (y * size) + left, currentHeight, ref bestDrop, ref bestIndex);
-        ConsiderNeighbor(heightData, (y * size) + right, currentHeight, ref bestDrop, ref bestIndex);
-        ConsiderNeighbor(heightData, (down * size) + x, currentHeight, ref bestDrop, ref bestIndex);
+        ConsiderNeighbor(heightData, x, y, x, y - 1, currentHeight, ref bestDrop, ref bestX, ref bestY);
+        ConsiderNeighbor(heightData, x, y, x - 1, y, currentHeight, ref bestDrop, ref bestX, ref bestY);
+        ConsiderNeighbor(heightData, x, y, x + 1, y, currentHeight, ref bestDrop, ref bestX, ref bestY);
+        ConsiderNeighbor(heightData, x, y, x, y + 1, currentHeight, ref bestDrop, ref bestX, ref bestY);
 
         if (includeDiagonalNeighbors) {
-            ConsiderNeighbor(heightData, (up * size) + left, currentHeight, ref bestDrop, ref bestIndex);
-            ConsiderNeighbor(heightData, (up * size) + right, currentHeight, ref bestDrop, ref bestIndex);
-            ConsiderNeighbor(heightData, (down * size) + left, currentHeight, ref bestDrop, ref bestIndex);
-            ConsiderNeighbor(heightData, (down * size) + right, currentHeight, ref bestDrop, ref bestIndex);
+            ConsiderNeighbor(heightData, x, y, x - 1, y - 1, currentHeight, ref bestDrop, ref bestX, ref bestY);
+            ConsiderNeighbor(heightData, x, y, x + 1, y - 1, currentHeight, ref bestDrop, ref bestX, ref bestY);
+            ConsiderNeighbor(heightData, x, y, x - 1, y + 1, currentHeight, ref bestDrop, ref bestX, ref bestY);
+            ConsiderNeighbor(heightData, x, y, x + 1, y + 1, currentHeight, ref bestDrop, ref bestX, ref bestY);
         }
 
-        return bestIndex;
+        return bestDrop > 0.0f;
     }
 
-    private static void ConsiderNeighbor(float[] heightData, int neighborIndex, float currentHeight, ref float bestDrop, ref int bestIndex) {
-        float drop = currentHeight - heightData[neighborIndex];
+    private static void ConsiderNeighbor(Torus<float> heightData, int currentX, int currentY, int candidateX, int candidateY, float currentHeight, ref float bestDrop, ref int bestX, ref int bestY) {
+        float drop = currentHeight - heightData[candidateX, candidateY];
         if (drop > bestDrop) {
             bestDrop = drop;
-            bestIndex = neighborIndex;
+            bestX = candidateX;
+            bestY = candidateY;
         }
     }
 
-    private static void Normalize(float[] values) {
+    private static void Normalize(Torus<float> values) {
         float min = float.MaxValue;
         float max = float.MinValue;
+        int size = values.Size;
 
-        for (int i = 0; i < values.Length; i++) {
-            float value = values[i];
-            if (value < min) {
-                min = value;
-            }
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                float value = values[x, y];
+                if (value < min) {
+                    min = value;
+                }
 
-            if (value > max) {
-                max = value;
+                if (value > max) {
+                    max = value;
+                }
             }
         }
 
         float range = max - min;
         if (range <= 0.0f) {
-            for (int i = 0; i < values.Length; i++) {
-                values[i] = 0.5f;
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    values[x, y] = 0.5f;
+                }
             }
 
             return;
         }
 
-        for (int i = 0; i < values.Length; i++) {
-            values[i] = (values[i] - min) / range;
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                values[x, y] = (values[x, y] - min) / range;
+            }
         }
     }
 
-    private static void NormalizeToMax(float[] values) {
+    private static void NormalizeToMax(Torus<float> values) {
         float max = 0.0f;
-        for (int i = 0; i < values.Length; i++) {
-            if (values[i] > max) {
-                max = values[i];
+
+        int size = values.Size;
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                if (values[x, y] > max) {
+                    max = values[x, y];
+                }
             }
         }
 
@@ -140,8 +142,10 @@ internal sealed class RandomRaindropErosionLayer {
             return;
         }
 
-        for (int i = 0; i < values.Length; i++) {
-            values[i] /= max;
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                values[x, y] /= max;
+            }
         }
     }
 

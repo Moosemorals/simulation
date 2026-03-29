@@ -82,7 +82,7 @@ public sealed class TerrainController : ControllerBase {
             Seed = request.Seed,
             Size = request.ResizeEnabled ? request.SourceSize : baseOptions.Size,
             BaseAlgorithm = baseOptions.BaseAlgorithm,
-            ErosionPasses = request.ErosionPasses,
+            ErosionPasses = request.Raindrops,
             UpscaleFactor = baseOptions.UpscaleFactor,
             RaindropErosion = new RandomRaindropErosionTuning {
                 DropPathLength = request.DropPathLength,
@@ -128,7 +128,7 @@ public sealed record TerrainTuningDefaultsDto(
     int Seed,
     int Size,
     int UpscaleFactor,
-    int ErosionPasses,
+    int Raindrops,
     int DropPathLength,
     int NeighborSampleCount,
     float ErosionStrength,
@@ -142,7 +142,7 @@ public sealed class TerrainTuningRequestDto {
 
     public bool ResizeEnabled { get; init; }
 
-    public int ErosionPasses { get; init; }
+    public int Raindrops { get; init; }
 
     public int DropPathLength { get; init; }
 
@@ -159,7 +159,7 @@ public sealed record TerrainTuningRenderDto(
     int Size,
     int UpscaleFactor,
     bool ResizeEnabled,
-    int ErosionPasses,
+    int Raindrops,
     int DropPathLength,
     int NeighborSampleCount,
     float ErosionStrength,

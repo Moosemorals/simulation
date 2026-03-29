@@ -25,10 +25,13 @@ public sealed class TerrainGenerationOptions {
             throw new ArgumentOutOfRangeException(nameof(Size), "Map size must be positive.");
         }
 
+        if (!IsPowerOfTwo(Size)) {
+            throw new ArgumentException("Map size must be a power of two.", nameof(Size));
+        }
+
         if (string.Equals(BaseAlgorithm, "diamond-square", StringComparison.OrdinalIgnoreCase)) {
-            int edgeLength = Size - 1;
-            if (!IsPowerOfTwo(edgeLength)) {
-                throw new ArgumentException("Diamond-square requires map dimensions of 2^n + 1.");
+            if (!IsPowerOfTwo(UpscaleFactor)) {
+                throw new ArgumentException("Diamond-square upscaling requires UpscaleFactor to be a power of two.", nameof(UpscaleFactor));
             }
         }
 

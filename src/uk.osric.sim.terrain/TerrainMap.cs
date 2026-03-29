@@ -6,13 +6,13 @@ namespace uk.osric.sim.terrain;
 public sealed class TerrainMap {
     public required int Size { get; init; }
 
-    public required float[] HeightData { get; init; }
+    public required Torus<float> HeightData { get; init; }
 
-    public float[] WaterAccumulationData { get; init; } = [];
+    public required Torus<float> WaterAccumulationData { get; init; }
 
-    public bool[] RiverMask { get; init; } = [];
+    public required Torus<bool> RiverMask { get; init; }
 
-    public bool[] LakeMask { get; init; } = [];
+    public required Torus<bool> LakeMask { get; init; }
 
     public byte[] BiomeData { get; init; } = [];
 

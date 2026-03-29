@@ -11,7 +11,7 @@ const sizePowerOutput = document.getElementById("sizePower-value");
 const renderEntries = [];
 
 function sizeFromPower(power) {
-    return (2 ** power) + 1;
+    return 2 ** power;
 }
 
 function clamp(value, min, max) {
@@ -23,7 +23,7 @@ function powerFromSize(size) {
         return Number(sizePowerInput.min);
     }
 
-    const exactPower = Math.log2(size - 1);
+    const exactPower = Math.log2(size);
     const roundedPower = Math.round(exactPower);
     const minPower = Number(sizePowerInput.min);
     const maxPower = Number(sizePowerInput.max);
@@ -32,7 +32,7 @@ function powerFromSize(size) {
 
 const fieldIds = [
     "seed",
-    "erosionPasses",
+    "raindrops",
     "dropPathLength",
     "neighborSampleCount",
     "erosionStrength",
@@ -184,7 +184,7 @@ function updateOutputValues() {
     const selectedSize = sizeFromPower(power);
     const resizeEnabled = resizeToggle !== null && resizeToggle.checked;
     sizePowerOutput.textContent = resizeEnabled
-        ? `${selectedSize} (2^${power} + 1)`
+        ? `${selectedSize} (2^${power})`
         : `${selectedSize} (locked unless resizing is enabled)`;
 }
 
@@ -204,7 +204,7 @@ function buildRequestBody() {
         seed: Number(fieldElements.seed.input.value),
         sourceSize: sizeFromPower(Number(sizePowerInput.value)),
         resizeEnabled: resizeToggle !== null && resizeToggle.checked,
-        erosionPasses: Number(fieldElements.erosionPasses.input.value),
+        raindrops: Number(fieldElements.raindrops.input.value),
         dropPathLength: Number(fieldElements.dropPathLength.input.value),
         neighborSampleCount: Number(fieldElements.neighborSampleCount.input.value),
         erosionStrength: Number(fieldElements.erosionStrength.input.value),
@@ -218,7 +218,7 @@ function buildConfigSnippet(payload) {
             DefaultSeed: payload.seed,
             DefaultSize: payload.sourceSize,
             UpscaleFactor: payload.upscaleFactor,
-            ErosionPasses: payload.erosionPasses,
+            ErosionPasses: payload.raindrops,
             RaindropErosion: {
                 DropPathLength: payload.dropPathLength,
                 NeighborSampleCount: payload.neighborSampleCount,
@@ -269,7 +269,7 @@ function addRenderCard(payload, elapsedMs) {
         renderedSize: payload.size,
         upscaleFactor: payload.upscaleFactor,
         resizeEnabled: payload.resizeEnabled,
-        erosionPasses: payload.erosionPasses,
+        raindrops: payload.raindrops,
         dropPathLength: payload.dropPathLength,
         neighborSampleCount: payload.neighborSampleCount,
         erosionStrength: Number(payload.erosionStrength.toFixed(3)),
@@ -329,7 +329,7 @@ async function loadDefaults() {
     const defaults = await response.json();
     fieldElements.seed.input.value = defaults.seed;
     sizePowerInput.value = powerFromSize(defaults.size);
-    fieldElements.erosionPasses.input.value = defaults.erosionPasses;
+    fieldElements.raindrops.input.value = defaults.raindrops;
     fieldElements.dropPathLength.input.value = defaults.dropPathLength;
     fieldElements.neighborSampleCount.input.value = defaults.neighborSampleCount;
     fieldElements.erosionStrength.input.value = defaults.erosionStrength;
@@ -358,43 +358,85 @@ async function submitRender() {
     addRenderCard(payload, endedAt - startedAt);
 }
 
+const missingElements = [];
+
+if (form === null) {
+    missingElements.push("tuning-form");
+}
+
+if (formStatus === null) {
+    missingElements.push("form-status");
+}
+
+if (renderList === null) {
+    missingElements.push("render-list");
+}
+
+if (generateButton === null) {
+    missingElements.push("generate");
+}
+
+if (sizePowerInput === null) {
+    missingElements.push("sizePower");
+}
+
+if (sizePowerOutput === null) {
+    missingElements.push("sizePower-value");
+}
+
 for (const id of fieldIds) {
-    const { input } = fieldElements[id];
-    input.addEventListener("input", updateOutputValues);
-}
+    const { input, output } = fieldElements[id];
 
-sizePowerInput.addEventListener("input", updateOutputValues);
-
-if (resizeToggle !== null) {
-    resizeToggle.addEventListener("change", () => {
-        syncResizeControlState();
-    });
-}
-
-if (showWaterOverlayToggle !== null) {
-    showWaterOverlayToggle.addEventListener("change", () => {
-        redrawAllCards();
-    });
-}
-
-form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    generateButton.disabled = true;
-    formStatus.textContent = "Generating terrain...";
-
-    try {
-        await submitRender();
-        formStatus.textContent = "Render complete. New map inserted at the top.";
-    } catch (error) {
-        formStatus.textContent = error instanceof Error ? error.message : String(error);
-    } finally {
-        generateButton.disabled = false;
+    if (input === null) {
+        missingElements.push(id);
     }
-});
 
-loadDefaults().then(() => {
-    syncResizeControlState();
-    formStatus.textContent = "Defaults loaded. Adjust sliders and generate.";
-}).catch((error) => {
-    formStatus.textContent = error instanceof Error ? error.message : String(error);
-});
+    if (output === null) {
+        missingElements.push(`${id}-value`);
+    }
+}
+
+if (missingElements.length > 0) {
+    console.warn(`Terrain lab controls not initialized. Missing elements: ${missingElements.join(", ")}`);
+} else {
+    for (const id of fieldIds) {
+        const { input } = fieldElements[id];
+        input.addEventListener("input", updateOutputValues);
+    }
+
+    sizePowerInput.addEventListener("input", updateOutputValues);
+
+    if (resizeToggle !== null) {
+        resizeToggle.addEventListener("change", () => {
+            syncResizeControlState();
+        });
+    }
+
+    if (showWaterOverlayToggle !== null) {
+        showWaterOverlayToggle.addEventListener("change", () => {
+            redrawAllCards();
+        });
+    }
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        generateButton.disabled = true;
+        formStatus.textContent = "Generating terrain...";
+
+        try {
+            await submitRender();
+            formStatus.textContent = "Render complete. New map inserted at the top.";
+        } catch (error) {
+            formStatus.textContent = error instanceof Error ? error.message : String(error);
+        } finally {
+            generateButton.disabled = false;
+        }
+    });
+
+    loadDefaults().then(() => {
+        syncResizeControlState();
+        formStatus.textContent = "Defaults loaded. Adjust sliders and generate.";
+    }).catch((error) => {
+        formStatus.textContent = error instanceof Error ? error.message : String(error);
+    });
+}

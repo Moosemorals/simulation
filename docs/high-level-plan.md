@@ -56,7 +56,7 @@ Goal: build terrain generation as deterministic layers with clear handoff data b
    - start from seeded corner values
    - perform alternating diamond and square steps
    - decay displacement each iteration by roughness.
-   - constrain map size to $2^n + 1$ for baseline implementation.
+   - constrain map size to $2^n$ for baseline implementation.
 3. Remove seam artifacts:
    - mirror or wrap sample neighborhoods during each step
    - enforce equal values along opposite edges when needed.
