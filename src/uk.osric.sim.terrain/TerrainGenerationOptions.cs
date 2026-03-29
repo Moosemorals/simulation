@@ -12,9 +12,17 @@ public sealed class TerrainGenerationOptions {
 
     public string BaseAlgorithm { get; init; } = "diamond-square";
 
-    public float Roughness { get; init; } = 0.55f;
+    public float Roughness { get; init; } = 0.45f;
 
     public float InitialDisplacement { get; init; } = 1.0f;
+
+    /// <summary>
+    /// The minimum grid spacing at which diamond-square stops adding detail.
+    /// Must be a power of two between 1 and Size. Default 1 runs all passes.
+    /// Higher values (e.g. 4, 8) cut fine-detail passes and bilinearly
+    /// interpolate unfilled cells, producing larger, smoother hills.
+    /// </summary>
+    public int SmoothnessStopStep { get; init; } = 1;
 
     public int ErosionPasses { get; init; } = 1;
 
@@ -37,6 +45,12 @@ public sealed class TerrainGenerationOptions {
 
         if (Roughness <= 0.0f || Roughness >= 1.0f) {
             throw new ArgumentOutOfRangeException(nameof(Roughness), "Roughness must be between 0 and 1.");
+        }
+
+        if (!IsPowerOfTwo(SmoothnessStopStep) || SmoothnessStopStep > Size) {
+            throw new ArgumentException(
+                "SmoothnessStopStep must be a power of two no greater than Size.",
+                nameof(SmoothnessStopStep));
         }
 
         if (InitialDisplacement <= 0.0f) {

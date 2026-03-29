@@ -179,6 +179,97 @@ public sealed class TerrainGenerationOrchestratorBehaviourTests {
         Assert.That(Flatten(heavilyEroded.HeightData), Is.Not.EqualTo(Flatten(lightlyEroded.HeightData)));
     }
 
+    [Test]
+    public void Generate_WithSmoothnessStopStep_ProducesNormalisedHeightInRange() {
+        TerrainGenerationOptions options = new() {
+            Seed = 42,
+            Size = 64,
+            ErosionPasses = 0,
+            UpscaleFactor = 1,
+            SmoothnessStopStep = 8,
+        };
+        TerrainGenerationOrchestrator generator = new();
+
+        TerrainMap map = generator.Generate(options);
+        float[] values = Flatten(map.HeightData);
+
+        Assert.Multiple(() => {
+            Assert.That(values, Has.Length.EqualTo(64 * 64));
+            Assert.That(values, Has.All.InRange(0.0f, 1.0f));
+            Assert.That(values.Min(), Is.EqualTo(0.0f).Within(0.00001f));
+            Assert.That(values.Max(), Is.EqualTo(1.0f).Within(0.00001f));
+        });
+    }
+
+    [Test]
+    public void Generate_WithSmoothnessStopStep_IsDeterministic() {
+        TerrainGenerationOptions options = new() {
+            Seed = 1729,
+            Size = 64,
+            ErosionPasses = 0,
+            UpscaleFactor = 1,
+            SmoothnessStopStep = 8,
+        };
+        TerrainGenerationOrchestrator generator = new();
+
+        TerrainMap first = generator.Generate(options);
+        TerrainMap second = generator.Generate(options);
+
+        Assert.That(Flatten(first.HeightData), Is.EqualTo(Flatten(second.HeightData)));
+    }
+
+    [Test]
+    public void Generate_WithSmoothnessStopStep_PreservesToroidalEdges() {
+        TerrainGenerationOptions options = new() {
+            Seed = 42,
+            Size = 64,
+            ErosionPasses = 0,
+            UpscaleFactor = 1,
+            SmoothnessStopStep = 8,
+        };
+        TerrainGenerationOrchestrator generator = new();
+
+        TerrainMap map = generator.Generate(options);
+        int size = map.Size;
+
+        for (int i = 0; i < size; i++) {
+            float top = map.HeightData[i, 0];
+            float wrappedTop = map.HeightData[i, size];
+            float left = map.HeightData[0, i];
+            float wrappedLeft = map.HeightData[size, i];
+
+            Assert.Multiple(() => {
+                Assert.That(wrappedTop, Is.EqualTo(top).Within(0.00001f));
+                Assert.That(wrappedLeft, Is.EqualTo(left).Within(0.00001f));
+            });
+        }
+    }
+
+    [Test]
+    public void Generate_WithSmoothnessStopStep_InteriorCellsAreBilinearlyInterpolated() {
+        // Use a minimal map (Size=8) and stop after the very first diamond-square
+        // pass so that the only filled cells are the multiples-of-4 grid.
+        // A cell at (1, 0) must equal 0.75*h[0,0] + 0.25*h[4,0] (tx=0.25, ty=0).
+        TerrainGenerationOptions options = new() {
+            Seed = 7,
+            Size = 8,
+            ErosionPasses = 0,
+            UpscaleFactor = 1,
+            SmoothnessStopStep = 4,
+        };
+        TerrainGenerationOrchestrator generator = new();
+
+        // We can only check proportionality after normalisation, so we verify
+        // that (1,0) lies on the line between (0,0) and (4,0) in the normalised space.
+        TerrainMap map = generator.Generate(options);
+        float h00 = map.HeightData[0, 0];
+        float h40 = map.HeightData[4, 0];
+        float h10 = map.HeightData[1, 0];
+
+        float expected = h00 * 0.75f + h40 * 0.25f;
+        Assert.That(h10, Is.EqualTo(expected).Within(0.0001f));
+    }
+
     private static TerrainGenerationOptions CreateDefaultOptions(int seed, int erosionPasses = 1) {
         return new TerrainGenerationOptions {
             Seed = seed,

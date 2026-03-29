@@ -7,10 +7,10 @@ internal sealed class DiamondSquareTerrainGenerator {
     public static Torus<float> GenerateHeightData(TerrainGenerationOptions options) {
         ArgumentNullException.ThrowIfNull(options);
 
-        return GenerateHeightField(options.Size, options.Seed, options.InitialDisplacement, options.Roughness);
+        return GenerateHeightField(options.Size, options.Seed, options.InitialDisplacement, options.Roughness, options.SmoothnessStopStep);
     }
 
-    private static Torus<float> GenerateHeightField(int size, int seed, float initialDisplacement, float roughness) {
+    private static Torus<float> GenerateHeightField(int size, int seed, float initialDisplacement, float roughness, int smoothnessStopStep) {
         Torus<float> heightData = new(size);
         Random rng = new(seed);
 
@@ -52,10 +52,51 @@ internal sealed class DiamondSquareTerrainGenerator {
 
             step /= 2;
             displacement *= roughness;
+
+            // Stop adding fine detail when below the requested threshold.
+            // Any unfilled cells will be interpolated below.
+            if (step <= smoothnessStopStep) {
+                break;
+            }
+        }
+
+        // When we stopped early the grid is only filled at multiples of `step`.
+        // Bilinearly interpolate everything in between so no cell is left at its
+        // default zero value.
+        if (step > 1) {
+            BilinearFill(heightData, size, step);
         }
 
         Normalize(heightData);
         return heightData;
+    }
+
+    // Fills every cell that is not on the coarse grid (multiples of gridSpacing)
+    // using bilinear interpolation between its four enclosing grid corners.
+    private static void BilinearFill(Torus<float> heightData, int size, int gridSpacing) {
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                if (x % gridSpacing == 0 && y % gridSpacing == 0) {
+                    continue;
+                }
+
+                int x0 = (x / gridSpacing) * gridSpacing;
+                int y0 = (y / gridSpacing) * gridSpacing;
+
+                float tx = (float)(x - x0) / gridSpacing;
+                float ty = (float)(y - y0) / gridSpacing;
+
+                float tl = heightData[x0, y0];
+                float tr = heightData[x0 + gridSpacing, y0];
+                float bl = heightData[x0, y0 + gridSpacing];
+                float br = heightData[x0 + gridSpacing, y0 + gridSpacing];
+
+                heightData[x, y] = tl * (1 - tx) * (1 - ty)
+                                  + tr * tx * (1 - ty)
+                                  + bl * (1 - tx) * ty
+                                  + br * tx * ty;
+            }
+        }
     }
 
     private static float NextDisplacement(Random rng, float amplitude) {

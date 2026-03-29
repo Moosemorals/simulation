@@ -11,6 +11,7 @@ public sealed class TerrainSnapshot {
     private const int FallbackSize = 64;
     private const int FallbackErosionPasses = 1;
     private const int FallbackUpscaleFactor = 1;
+    private const int FallbackSmoothnessStopStep = 1;
 
     public TerrainSnapshot(ITerrainGenerator generator, IConfiguration configuration, ILogger<TerrainSnapshot> logger) {
         ArgumentNullException.ThrowIfNull(generator);
@@ -55,6 +56,7 @@ public sealed class TerrainSnapshot {
             BaseAlgorithm = "diamond-square",
             ErosionPasses = configuration.GetValue<int?>("Terrain:ErosionPasses") ?? FallbackErosionPasses,
             UpscaleFactor = configuration.GetValue<int?>("Terrain:UpscaleFactor") ?? FallbackUpscaleFactor,
+            SmoothnessStopStep = configuration.GetValue<int?>("Terrain:SmoothnessStopStep") ?? FallbackSmoothnessStopStep,
             RaindropErosion = new RandomRaindropErosionTuning {
                 DropPathLength = configuration.GetValue<int?>("Terrain:RaindropErosion:DropPathLength") ?? defaults.DropPathLength,
                 NeighborSampleCount = configuration.GetValue<int?>("Terrain:RaindropErosion:NeighborSampleCount") ?? defaults.NeighborSampleCount,

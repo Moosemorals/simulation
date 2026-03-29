@@ -17,9 +17,10 @@ public sealed class TerrainGenerationOptionsBehaviourTests {
 
         Assert.Multiple(() => {
             Assert.That(options.BaseAlgorithm, Is.EqualTo("diamond-square"));
-            Assert.That(options.Roughness, Is.EqualTo(0.55f));
+            Assert.That(options.Roughness, Is.EqualTo(0.45f));
             Assert.That(options.InitialDisplacement, Is.EqualTo(1.0f));
             Assert.That(options.ErosionPasses, Is.EqualTo(1));
+            Assert.That(options.SmoothnessStopStep, Is.EqualTo(1));
             Assert.That(options.RaindropErosion.DropPathLength, Is.EqualTo(64));
             Assert.That(options.RaindropErosion.NeighborSampleCount, Is.EqualTo(4));
         });
@@ -86,6 +87,30 @@ public sealed class TerrainGenerationOptionsBehaviourTests {
 
         ArgumentOutOfRangeException? exception = Assert.Throws<ArgumentOutOfRangeException>(() => options.Validate());
         Assert.That(exception!.ParamName, Is.EqualTo("NeighborSampleCount"));
+    }
+
+    [Test]
+    public void Validate_RejectsSmoothnessStopStepThatIsNotPowerOfTwo() {
+        TerrainGenerationOptions options = new() {
+            Seed = 1729,
+            Size = 256,
+            SmoothnessStopStep = 3,
+        };
+
+        ArgumentException? exception = Assert.Throws<ArgumentException>(() => options.Validate());
+        Assert.That(exception!.ParamName, Is.EqualTo("SmoothnessStopStep"));
+    }
+
+    [Test]
+    public void Validate_RejectsSmoothnessStopStepLargerThanSize() {
+        TerrainGenerationOptions options = new() {
+            Seed = 1729,
+            Size = 256,
+            SmoothnessStopStep = 512,
+        };
+
+        ArgumentException? exception = Assert.Throws<ArgumentException>(() => options.Validate());
+        Assert.That(exception!.ParamName, Is.EqualTo("SmoothnessStopStep"));
     }
 
     [Test]
