@@ -87,7 +87,16 @@ function decodeBase64(base64) {
     return bytes;
 }
 
-function createTerrainTexture(size, heightBytes) {
+function decodeBase64Float32(base64) {
+    const bytes = decodeBase64(base64);
+    if (bytes.byteLength % Float32Array.BYTES_PER_ELEMENT !== 0) {
+        throw new Error("Float32 payload size was not a multiple of 4 bytes.");
+    }
+
+    return new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Float32Array.BYTES_PER_ELEMENT);
+}
+
+function createTerrainTexture(size, heightValues) {
     const textureCanvas = document.createElement("canvas");
     textureCanvas.width = size;
     textureCanvas.height = size;
@@ -100,8 +109,8 @@ function createTerrainTexture(size, heightBytes) {
     const imageData = textureContext.createImageData(size, size);
     const rgba = imageData.data;
 
-    for (let i = 0; i < heightBytes.length; i += 1) {
-        const grayscale = heightBytes[i];
+    for (let i = 0; i < heightValues.length; i += 1) {
+        const grayscale = Math.round(Math.min(1, Math.max(0, heightValues[i])) * 255);
         const pixelOffset = i * 4;
         rgba[pixelOffset] = grayscale;
         rgba[pixelOffset + 1] = grayscale;
@@ -113,7 +122,7 @@ function createTerrainTexture(size, heightBytes) {
     return textureCanvas;
 }
 
-function createWaterTexture(size, waterAccumulationBytes, riverMaskBytes, lakeMaskBytes) {
+function createWaterTexture(size, waterAccumulationValues, riverMaskBytes, lakeMaskBytes) {
     const textureCanvas = document.createElement("canvas");
     textureCanvas.width = size;
     textureCanvas.height = size;
@@ -126,16 +135,17 @@ function createWaterTexture(size, waterAccumulationBytes, riverMaskBytes, lakeMa
     const imageData = textureContext.createImageData(size, size);
     const rgba = imageData.data;
 
-    for (let i = 0; i < waterAccumulationBytes.length; i += 1) {
-        const flow = waterAccumulationBytes[i];
+    for (let i = 0; i < waterAccumulationValues.length; i += 1) {
+        const flow = Math.max(0, waterAccumulationValues[i]);
+        const flowIntensity = Math.round(Math.min(1, flow) * 255);
         const isRiver = riverMaskBytes[i] > 0;
         const isLake = lakeMaskBytes[i] > 0;
         const pixelOffset = i * 4;
 
         let red = 10;
-        let green = Math.min(180, Math.round(flow * 0.6));
-        let blue = Math.min(220, Math.round(flow * 0.9));
-        let alpha = Math.min(180, Math.round(flow * 0.55));
+        let green = Math.min(180, Math.round(flowIntensity * 0.6));
+        let blue = Math.min(220, Math.round(flowIntensity * 0.9));
+        let alpha = Math.min(180, Math.round(flowIntensity * 0.55));
 
         if (isRiver) {
             red = 16;
@@ -161,11 +171,11 @@ function createWaterTexture(size, waterAccumulationBytes, riverMaskBytes, lakeMa
     return textureCanvas;
 }
 
-function drawCompositeMap(canvas, size, heightBytes, waterBytes, riverBytes, lakeBytes) {
-    const terrainTexture = createTerrainTexture(size, heightBytes);
+function drawCompositeMap(canvas, size, heightValues, waterValues, riverBytes, lakeBytes) {
+    const terrainTexture = createTerrainTexture(size, heightValues);
     const showWaterOverlay = showWaterOverlayToggle !== null ? showWaterOverlayToggle.checked : true;
     const waterTexture = showWaterOverlay
-        ? createWaterTexture(size, waterBytes, riverBytes, lakeBytes)
+        ? createWaterTexture(size, waterValues, riverBytes, lakeBytes)
         : null;
 
     const context = canvas.getContext("2d");
@@ -197,8 +207,8 @@ function redrawAllCards() {
         drawCompositeMap(
             entry.canvas,
             entry.size,
-            entry.heightBytes,
-            entry.waterBytes,
+            entry.heightValues,
+            entry.waterValues,
             entry.riverBytes,
             entry.lakeBytes);
     }
@@ -368,18 +378,18 @@ function addRenderCard(payload, elapsedMs) {
     card.appendChild(canvas);
     card.appendChild(meta);
 
-    const heightBytes = decodeBase64(payload.heightDataBase64);
-    const waterBytes = decodeBase64(payload.waterAccumulationDataBase64);
+    const heightValues = decodeBase64Float32(payload.heightFloatDataBase64);
+    const waterValues = decodeBase64Float32(payload.waterAccumulationFloatDataBase64);
     const riverBytes = decodeBase64(payload.riverMaskDataBase64);
     const lakeBytes = decodeBase64(payload.lakeMaskDataBase64);
 
-    drawCompositeMap(canvas, payload.renderedSize, heightBytes, waterBytes, riverBytes, lakeBytes);
+    drawCompositeMap(canvas, payload.renderedSize, heightValues, waterValues, riverBytes, lakeBytes);
 
     renderEntries.push({
         canvas,
         size: payload.renderedSize,
-        heightBytes,
-        waterBytes,
+        heightValues,
+        waterValues,
         riverBytes,
         lakeBytes,
     });

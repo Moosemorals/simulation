@@ -6,16 +6,13 @@ using uk.osric.sim.terrain;
 namespace uk.osric.sim.server.Terrain;
 
 internal static class TerrainMapEncoding {
-    public static byte[] EncodeHeight(TerrainMap map) {
-        return TerrainHeightEncoding.ToGreyscaleBytes(map);
-    }
-
-    public static byte[] EncodeFloats(Torus<float> values) {
-        byte[] bytes = new byte[values.Size * values.Size];
+    public static byte[] EncodeFloat32(Torus<float> values) {
+        byte[] bytes = new byte[values.Size * values.Size * sizeof(float)];
+        int offset = 0;
         for (int y = 0; y < values.Size; y++) {
             for (int x = 0; x < values.Size; x++) {
-                float clamped = Math.Clamp(values[x, y], 0.0f, 1.0f);
-                bytes[(y * values.Size) + x] = (byte)Math.Clamp((int)MathF.Round(clamped * 255.0f), 0, 255);
+                BitConverter.TryWriteBytes(bytes.AsSpan(offset, sizeof(float)), values[x, y]);
+                offset += sizeof(float);
             }
         }
 

@@ -24,8 +24,8 @@ public sealed class TerrainSnapshot {
 
         logger.LogInformation("Terrain generation complete in {ElapsedMs} ms", sw.ElapsedMilliseconds);
 
-        HeightBytes = TerrainMapEncoding.EncodeHeight(Map);
-        WaterAccumulationBytes = TerrainMapEncoding.EncodeFloats(Map.WaterAccumulationData);
+        HeightFloatBytes = TerrainMapEncoding.EncodeFloat32(Map.HeightData);
+        WaterAccumulationFloatBytes = TerrainMapEncoding.EncodeFloat32(Map.WaterAccumulationData);
         RiverMaskBytes = TerrainMapEncoding.EncodeMask(Map.RiverMask);
         LakeMaskBytes = TerrainMapEncoding.EncodeMask(Map.LakeMask);
     }
@@ -34,9 +34,9 @@ public sealed class TerrainSnapshot {
 
     public TerrainMap Map { get; }
 
-    public byte[] HeightBytes { get; }
+    public byte[] HeightFloatBytes { get; }
 
-    public byte[] WaterAccumulationBytes { get; }
+    public byte[] WaterAccumulationFloatBytes { get; }
 
     public byte[] RiverMaskBytes { get; }
 

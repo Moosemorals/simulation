@@ -57,14 +57,15 @@ internal sealed class DiamondSquareTerrainGenerator {
                 }
             }
 
-            step /= 2;
-            displacement *= roughness;
-
             // Stop adding fine detail when below the requested threshold.
             // Any unfilled cells will be interpolated below.
             if (step <= smoothnessStopStep) {
+                step /= 2;
                 break;
             }
+
+            step /= 2;
+            displacement *= roughness;
         }
 
         // When we stopped early the grid is only filled at multiples of `step`.

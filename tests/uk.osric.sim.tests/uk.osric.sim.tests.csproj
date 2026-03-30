@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\uk.osric.sim.contracts\uk.osric.sim.contracts.csproj" />
+    <ProjectReference Include="..\..\src\uk.osric.sim.server\uk.osric.sim.server.csproj" />
     <ProjectReference Include="..\..\src\uk.osric.sim.simulation\uk.osric.sim.simulation.csproj" />
     <ProjectReference Include="..\..\src\uk.osric.sim.terrain\uk.osric.sim.terrain.csproj" />
   </ItemGroup>

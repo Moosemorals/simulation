@@ -38,7 +38,7 @@ public sealed class TerrainController : ControllerBase {
     public ActionResult<TerrainHeightMapDto> GetHeightMap() {
         TerrainHeightMapDto dto = new(
             terrainSnapshot.Map.Size,
-            Convert.ToBase64String(terrainSnapshot.HeightBytes)
+            Convert.ToBase64String(terrainSnapshot.HeightFloatBytes)
         );
 
         return Ok(dto);
@@ -48,7 +48,7 @@ public sealed class TerrainController : ControllerBase {
     public ActionResult<TerrainWaterMapDto> GetWaterMap() {
         TerrainWaterMapDto dto = new(
             terrainSnapshot.Map.Size,
-            Convert.ToBase64String(terrainSnapshot.WaterAccumulationBytes),
+            Convert.ToBase64String(terrainSnapshot.WaterAccumulationFloatBytes),
             Convert.ToBase64String(terrainSnapshot.RiverMaskBytes),
             Convert.ToBase64String(terrainSnapshot.LakeMaskBytes)
         );
@@ -70,8 +70,8 @@ public sealed class TerrainController : ControllerBase {
         }
 
         TerrainMap map = terrainGenerator.Generate(configuration);
-        byte[] heightBytes = TerrainMapEncoding.EncodeHeight(map);
-        byte[] waterBytes = TerrainMapEncoding.EncodeFloats(map.WaterAccumulationData);
+        byte[] heightBytes = TerrainMapEncoding.EncodeFloat32(map.HeightData);
+        byte[] waterBytes = TerrainMapEncoding.EncodeFloat32(map.WaterAccumulationData);
         byte[] riverBytes = TerrainMapEncoding.EncodeMask(map.RiverMask);
         byte[] lakeBytes = TerrainMapEncoding.EncodeMask(map.LakeMask);
 

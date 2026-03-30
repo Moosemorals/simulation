@@ -275,6 +275,122 @@ public sealed class TerrainOrchestratorBehaviourTests {
     }
 
     [Test]
+    public void Generate_WithCoarseSmoothnessStopStep_StillRespondsToRoughness() {
+        TerrainOrchestrator generator = new();
+
+        TerrainConfiguration lowRoughness = new() {
+            Seed = 1729,
+            Size = 64,
+            UpscaleFactor = 1,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 32,
+                Roughness = 0.05f,
+                InitialDisplacement = 1.0f,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
+        };
+
+        TerrainConfiguration highRoughness = new() {
+            Seed = 1729,
+            Size = 64,
+            UpscaleFactor = 1,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 32,
+                Roughness = 0.95f,
+                InitialDisplacement = 1.0f,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
+        };
+
+        TerrainMap lowRoughnessMap = generator.Generate(lowRoughness);
+        TerrainMap highRoughnessMap = generator.Generate(highRoughness);
+
+        Assert.That(Flatten(lowRoughnessMap.HeightData), Is.Not.EqualTo(Flatten(highRoughnessMap.HeightData)));
+    }
+
+    [Test]
+    public void Generate_WithSizeFourWorld_RespondsToRoughness() {
+        TerrainOrchestrator generator = new();
+
+        TerrainConfiguration lowRoughness = new() {
+            Seed = 1729,
+            Size = 4,
+            UpscaleFactor = 1,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 2,
+                Roughness = 0.05f,
+                InitialDisplacement = 1.0f,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
+        };
+
+        TerrainConfiguration highRoughness = new() {
+            Seed = 1729,
+            Size = 4,
+            UpscaleFactor = 1,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 2,
+                Roughness = 0.95f,
+                InitialDisplacement = 1.0f,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
+        };
+
+        TerrainMap lowRoughnessMap = generator.Generate(lowRoughness);
+        TerrainMap highRoughnessMap = generator.Generate(highRoughness);
+
+        Assert.That(Flatten(lowRoughnessMap.HeightData), Is.Not.EqualTo(Flatten(highRoughnessMap.HeightData)));
+    }
+
+    [Test]
+    public void Generate_WithHigherRoughness_ProducesQuantifiableHeightDifference() {
+        TerrainOrchestrator generator = new();
+
+        TerrainConfiguration lowRoughness = new() {
+            Seed = 1729,
+            Size = 64,
+            UpscaleFactor = 1,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 32,
+                Roughness = 0.05f,
+                InitialDisplacement = 1.0f,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
+        };
+
+        TerrainConfiguration highRoughness = new() {
+            Seed = 1729,
+            Size = 64,
+            UpscaleFactor = 1,
+            DiamondSquare = new DiamondSquareConfiguration {
+                SmoothnessStopStep = 32,
+                Roughness = 0.95f,
+                InitialDisplacement = 1.0f,
+            },
+            Erosion = new TerrainErosionConfiguration {
+                Raindrops = 0,
+            },
+        };
+
+        TerrainMap lowRoughnessMap = generator.Generate(lowRoughness);
+        TerrainMap highRoughnessMap = generator.Generate(highRoughness);
+
+        float difference = MeasureMeanAbsoluteDifference(lowRoughnessMap.HeightData, highRoughnessMap.HeightData);
+
+        Assert.That(difference, Is.GreaterThan(0.0f));
+    }
+
+    [Test]
     public void Generate_WithSmoothnessStopStep_InteriorCellsAreBilinearlyInterpolated() {
         // Use a minimal map (Size=8) and stop after the very first diamond-square
         // pass so that the only filled cells are the multiples-of-4 grid.
@@ -284,7 +400,7 @@ public sealed class TerrainOrchestratorBehaviourTests {
             Size = 8,
             UpscaleFactor = 1,
             DiamondSquare = new DiamondSquareConfiguration {
-                SmoothnessStopStep = 4,
+                SmoothnessStopStep = 8,
             },
             Erosion = new TerrainErosionConfiguration {
                 Raindrops = 0,
@@ -336,5 +452,23 @@ public sealed class TerrainOrchestratorBehaviourTests {
         }
 
         return values;
+    }
+
+    private static float MeasureMeanAbsoluteDifference(Torus<float> first, Torus<float> second) {
+        if (first.Size != second.Size) {
+            throw new ArgumentException("Compared height maps must have identical dimensions.");
+        }
+
+        float sum = 0.0f;
+        int size = first.Size;
+        int samples = size * size;
+
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                sum += MathF.Abs(first[x, y] - second[x, y]);
+            }
+        }
+
+        return sum / samples;
     }
 }

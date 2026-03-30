@@ -18,7 +18,7 @@ export const state = {
     zoom: 1,
     zoomTarget: 1,
     terrainSize: 0,
-    terrainHeightBytes: null,
+    terrainHeightValues: null,
     terrainElevationScale: 42,
     viewCenterX: 0,
     viewCenterY: 0,

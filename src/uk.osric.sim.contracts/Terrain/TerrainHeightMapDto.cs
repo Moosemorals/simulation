@@ -5,5 +5,5 @@ namespace uk.osric.sim.contracts.Terrain;
 
 public sealed record TerrainHeightMapDto(
     int Size,
-    string HeightDataBase64
+    string HeightFloatDataBase64
 );

@@ -6,8 +6,8 @@ namespace uk.osric.sim.contracts.Terrain;
 public sealed record TerrainRenderDto(
     TerrainConfiguration Configuration,
     int RenderedSize,
-    string HeightDataBase64,
-    string WaterAccumulationDataBase64,
+    string HeightFloatDataBase64,
+    string WaterAccumulationFloatDataBase64,
     string RiverMaskDataBase64,
     string LakeMaskDataBase64
 );

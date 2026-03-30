@@ -18,11 +18,20 @@ export function decodeBase64(base64) {
     return bytes;
 }
 
-export function getNormalAt(heightBytes, size, x, y) {
-    const left = heightBytes[(y * size) + wrapCoordinate(x - 1, size)] / 255;
-    const right = heightBytes[(y * size) + wrapCoordinate(x + 1, size)] / 255;
-    const up = heightBytes[(wrapCoordinate(y - 1, size) * size) + x] / 255;
-    const down = heightBytes[(wrapCoordinate(y + 1, size) * size) + x] / 255;
+export function decodeBase64Float32(base64) {
+    const bytes = decodeBase64(base64);
+    if (bytes.byteLength % Float32Array.BYTES_PER_ELEMENT !== 0) {
+        throw new Error("Float32 payload size was not a multiple of 4 bytes.");
+    }
+
+    return new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Float32Array.BYTES_PER_ELEMENT);
+}
+
+export function getNormalAt(heightValues, size, x, y) {
+    const left = heightValues[(y * size) + wrapCoordinate(x - 1, size)];
+    const right = heightValues[(y * size) + wrapCoordinate(x + 1, size)];
+    const up = heightValues[(wrapCoordinate(y - 1, size) * size) + x];
+    const down = heightValues[(wrapCoordinate(y + 1, size) * size) + x];
 
     const dx = ((right - left) * state.terrainElevationScale) / terrainRenderScale;
     const dz = ((down - up) * state.terrainElevationScale) / terrainRenderScale;
@@ -35,27 +44,27 @@ export function getNormalAt(heightBytes, size, x, y) {
 }
 
 export function getElevationAt(worldX, worldY) {
-    if (state.terrainHeightBytes === null || state.terrainSize <= 0) {
+    if (state.terrainHeightValues === null || state.terrainSize <= 0) {
         return 0;
     }
 
     const x = wrapCoordinate(Math.round(worldX), state.terrainSize);
     const y = wrapCoordinate(Math.round(worldY), state.terrainSize);
-    const sample = state.terrainHeightBytes[(y * state.terrainSize) + x] ?? 0;
-    return (sample / 255) * state.terrainElevationScale;
+    const sample = state.terrainHeightValues[(y * state.terrainSize) + x] ?? 0;
+    return sample * state.terrainElevationScale;
 }
 
 export function getTerrainNormalAt(worldX, worldY) {
-    if (state.terrainHeightBytes === null || state.terrainSize <= 0) {
+    if (state.terrainHeightValues === null || state.terrainSize <= 0) {
         return [0, 1, 0];
     }
 
     const x = wrapCoordinate(Math.round(worldX), state.terrainSize);
     const y = wrapCoordinate(Math.round(worldY), state.terrainSize);
-    return getNormalAt(state.terrainHeightBytes, state.terrainSize, x, y);
+    return getNormalAt(state.terrainHeightValues, state.terrainSize, x, y);
 }
 
-export function updateTerrainMapStatus(size, byteCount, decodeDurationMs, meshDurationMs) {
+export function updateTerrainMapStatus(size, floatCount, decodeDurationMs, meshDurationMs) {
     if (terrainMapStatusElement === null) {
         return;
     }
@@ -63,14 +72,14 @@ export function updateTerrainMapStatus(size, byteCount, decodeDurationMs, meshDu
     terrainMapStatusElement.textContent = JSON.stringify({
         size,
         tileCount: size * size,
-        byteCount,
+        floatCount,
         decodeMs: Number(decodeDurationMs.toFixed(2)),
         meshUploadMs: Number(meshDurationMs.toFixed(2)),
         renderer: "webgl2",
     }, null, 2);
 }
 
-export function uploadTerrainMesh(size, heightBytes) {
+export function uploadTerrainMesh(size, heightValues) {
     if (state.terrainVertexArray !== null) {
         gl.deleteVertexArray(state.terrainVertexArray);
         state.terrainVertexArray = null;
@@ -94,8 +103,8 @@ export function uploadTerrainMesh(size, heightBytes) {
         for (let x = 0; x < size; x += 1) {
             const index = (y * size) + x;
             const offset = index * stride;
-            const height = (heightBytes[index] / 255) * state.terrainElevationScale;
-            const normal = getNormalAt(heightBytes, size, x, y);
+            const height = heightValues[index] * state.terrainElevationScale;
+            const normal = getNormalAt(heightValues, size, x, y);
 
             vertices[offset] = x * terrainRenderScale;
             vertices[offset + 1] = height;
@@ -161,14 +170,14 @@ export function uploadTerrainMesh(size, heightBytes) {
 export function hydrateTerrainMap(payload) {
     const decodeStart = performance.now();
     const size = payload.size;
-    const heightBytes = decodeBase64(payload.heightDataBase64);
+    const heightValues = decodeBase64Float32(payload.heightFloatDataBase64);
 
-    if (heightBytes.length !== size * size) {
+    if (heightValues.length !== size * size) {
         throw new Error("Height map payload size does not match map dimensions.");
     }
 
     state.terrainSize = size;
-    state.terrainHeightBytes = heightBytes;
+    state.terrainHeightValues = heightValues;
     state.zoom = clampZoom(state.zoom);
     state.zoomTarget = state.zoom;
     state.zoomAnimationActive = false;
@@ -176,7 +185,7 @@ export function hydrateTerrainMap(payload) {
     state.viewCenterY = ((size - 1) * 0.5) * terrainRenderScale;
     const decodeEnd = performance.now();
     const meshStart = performance.now();
-    uploadTerrainMesh(size, heightBytes);
+    uploadTerrainMesh(size, heightValues);
     const meshEnd = performance.now();
-    updateTerrainMapStatus(size, heightBytes.length, decodeEnd - decodeStart, meshEnd - meshStart);
+    updateTerrainMapStatus(size, heightValues.length, decodeEnd - decodeStart, meshEnd - meshStart);
 }

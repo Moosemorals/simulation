@@ -255,8 +255,8 @@ export function registerContextHandlers() {
         resetProgramState();
         initializePrograms();
 
-        if (state.terrainHeightBytes !== null && state.terrainSize > 0) {
-            uploadTerrainMesh(state.terrainSize, state.terrainHeightBytes);
+        if (state.terrainHeightValues !== null && state.terrainSize > 0) {
+            uploadTerrainMesh(state.terrainSize, state.terrainHeightValues);
         }
     });
 }
